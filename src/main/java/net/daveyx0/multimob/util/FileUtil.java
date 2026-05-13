@@ -5,21 +5,30 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.registries.VanillaRegistries;
+import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.apache.commons.io.FileUtils;
 
 public class FileUtil {
    public static void createTextFilesForModInfo(File directory) throws IOException {
-      listResourcesForRegistry(directory, "allEntities", ForgeRegistries.ENTITY_TYPES.getKeys());
-      listResourcesForRegistry(directory, "allItems", ForgeRegistries.ITEMS.getKeys());
-      listResourcesForRegistry(directory, "allBlocks", ForgeRegistries.BLOCKS.getKeys());
-      listResourcesForRegistry(directory, "allPotions", ForgeRegistries.MOB_EFFECTS.getKeys());
-      listResourcesForRegistry(directory, "allPotionTypes", ForgeRegistries.POTIONS.getKeys());
-      listResourcesForRegistry(directory, "allEnchantments", ForgeRegistries.ENCHANTMENTS.getKeys());
+      listResourcesForRegistry(directory, "allEntities", BuiltInRegistries.ENTITY_TYPE.keySet());
+      listResourcesForRegistry(directory, "allItems", BuiltInRegistries.ITEM.keySet());
+      listResourcesForRegistry(directory, "allBlocks", BuiltInRegistries.BLOCK.keySet());
+      listResourcesForRegistry(directory, "allPotions", BuiltInRegistries.MOB_EFFECT.keySet());
+      listResourcesForRegistry(directory, "allPotionTypes", BuiltInRegistries.POTION.keySet());
+      listResourcesForRegistry(directory, "allEnchantments", BuiltInRegistries.ENCHANTMENT_EFFECT_COMPONENT_TYPE.keySet());
       listBiomeResources(directory, "allBiomes", "allBiomeTypes");
       listBlockStateResources(directory, "allBlockStates");
       listStructureResources(directory, "allVanillaStructures");
@@ -39,7 +48,7 @@ public class FileUtil {
       new ArrayList();
       List<String> arrayList = new ArrayList();
 
-      for(Block loc : ForgeRegistries.BLOCKS) {
+      for(Block loc : BuiltInRegistries.BLOCK) {
          for(BlockState state : loc.getStateDefinition().getPossibleStates()) {
             arrayList.add(state.toString());
          }
@@ -48,22 +57,40 @@ public class FileUtil {
       createTextFile(directory, fileName, arrayList);
    }
 
+   public static HolderLookup.RegistryLookup<Biome> getBiomeLookup() {
+      HolderLookup.RegistryLookup<Biome> biomeLookup = VanillaRegistries.createLookup().lookupOrThrow(Registries.BIOME);
+      if (FMLEnvironment.dist == Dist.CLIENT) {
+         Minecraft minecraft = Minecraft.getInstance();
+         if (minecraft != null) {
+            RegistryAccess.Frozen base = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+            RegistryAccess.Frozen loaded = RegistryDataLoader.load(
+               minecraft.getResourceManager(),
+               base,
+               RegistryDataLoader.WORLDGEN_REGISTRIES.stream().filter(data -> data.key().equals(Registries.BIOME)).toList()
+            );
+            HolderLookup.RegistryLookup<Biome> loadedLookup = loaded.lookupOrThrow(Registries.BIOME);
+            if (loadedLookup.listElements().findAny().isPresent()) {
+               biomeLookup = loadedLookup;
+            }
+         }
+      }
+
+      return biomeLookup;
+   }
+
    public static void listBiomeResources(File directory, String fileName, String fileName2) throws IOException {
       List<String> arrayList = new ArrayList();
       List<String> arrayListTypes = new ArrayList();
+      HolderLookup.RegistryLookup<Biome> biomeRegistry = getBiomeLookup();
 
-      for(ResourceLocation loc : ForgeRegistries.BIOMES.getKeys()) {
-         arrayList.add(loc.toString());
-         Biome biome = ForgeRegistries.BIOMES.getValue(loc);
-         if (biome != null && ForgeRegistries.BIOMES.getHolder(ForgeRegistries.BIOMES.getResourceKey(biome).get()).isPresent()) {
-            net.minecraft.core.Holder<Biome> biomeHolder = ForgeRegistries.BIOMES.getHolder(ForgeRegistries.BIOMES.getResourceKey(biome).get()).get();
-            biomeHolder.tags().forEach(tag -> {
-               String tagName = tag.location().toString();
-               if (!arrayListTypes.contains(tagName)) {
-                  arrayListTypes.add(tagName);
-               }
-            });
-         }
+      for(Holder.Reference<Biome> biomeHolder : biomeRegistry.listElements().toList()) {
+         arrayList.add(biomeHolder.key().location().toString());
+         biomeHolder.tags().forEach(tag -> {
+            String tagName = tag.location().toString();
+            if (!arrayListTypes.contains(tagName)) {
+               arrayListTypes.add(tagName);
+            }
+         });
       }
 
       createTextFile(directory, fileName, arrayList);
@@ -79,16 +106,25 @@ public class FileUtil {
       arrayList.add("Mineshaft");
       arrayList.add("Temple");
       arrayList.add("Fortress");
+      arrayList.add("MineshaftMesa");
+      arrayList.add("Mansion");
+      arrayList.add("OceanMonument");
       arrayList.add("EndCity");
+      arrayList.add("Igloo");
+      arrayList.add("DesertPyramid");
+      arrayList.add("JunglePyramid");
+      arrayList.add("SwampHut");
+      arrayList.add("OceanRuin");
+      arrayList.add("Shipwreck");
+      arrayList.add("BuriedTreasure");
+      arrayList.add("PillagerOutpost");
+      arrayList.add("BastionRemnant");
+      arrayList.add("RuinedPortal");
       createTextFile(directory, fileName, arrayList);
    }
 
-   public static void createTextFile(File directory, String fileName, List<String> list) throws IOException {
-      File textFile = new File(directory, fileName + ".txt");
-      if (textFile.exists()) {
-         textFile.delete();
-      }
-
-      FileUtils.writeLines(textFile, list);
+   public static void createTextFile(File directory, String fileName, List<String> arrayList) throws IOException {
+      File file = new File(directory, fileName + ".txt");
+      FileUtils.writeLines(file, arrayList);
    }
 }

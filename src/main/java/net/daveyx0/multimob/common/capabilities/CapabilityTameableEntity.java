@@ -1,7 +1,6 @@
 package net.daveyx0.multimob.common.capabilities;
 
 import java.util.UUID;
-import net.daveyx0.multimob.capabilities.CapabilityProviderSerializable;
 import net.daveyx0.multimob.core.MMTameableEntries;
 import net.daveyx0.multimob.entity.ai.EntityAITameableFollowOwner;
 import net.daveyx0.multimob.entity.ai.EntityAITameableOwnerHurtByTarget;
@@ -12,10 +11,9 @@ import net.daveyx0.multimob.message.MessageMMTameable;
 import net.daveyx0.multimob.util.EntityUtil;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
@@ -24,45 +22,33 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.event.AttachCapabilitiesEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
-import net.minecraftforge.event.entity.living.MobSpawnEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.MobDespawnEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.capabilities.EntityCapability;
 
 public class CapabilityTameableEntity {
-   public static Capability<ITameableEntity> TAMEABLE_ENTITY_CAPABILITY = CapabilityManager.get(new CapabilityToken<>(){});
-   public static final ResourceLocation capabilityID = new ResourceLocation("multimob", "tameable");
+   public static final EntityCapability<ITameableEntity, Void> TAMEABLE_ENTITY_CAPABILITY = EntityCapability.createVoid(ResourceLocation.fromNamespaceAndPath("multimob", "tameable"), ITameableEntity.class);
+   public static final ResourceLocation capabilityID = ResourceLocation.fromNamespaceAndPath("multimob", "tameable");
 
    public static void register() {
    }
 
-   @Mod.EventBusSubscriber(modid = "multimob")
+   @EventBusSubscriber(modid = "multimob")
    public static class EventHandler {
-      @SubscribeEvent
-      public static void AttachEntityCapabilitiesEvent(AttachCapabilitiesEvent<Entity> event) {
-         if (event.getObject() != null && MMTameableEntries.tameableEntries.containsKey(((Entity)event.getObject()).getClass())) {
-            event.addCapability(CapabilityTameableEntity.capabilityID, new CapabilityProviderSerializable(CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY));
-         }
-      }
-
       @SubscribeEvent
       public static void EntityLivingDeathEvent(LivingDeathEvent event) {
          if (isTameableEntity(event.getEntity())) {
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             Mob entity = (Mob)event.getEntity();
             if (!entity.level().isClientSide && entity.level().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES) && tameable.getOwner(entity) != null && tameable.getOwner(entity) instanceof ServerPlayer) {
                tameable.getOwner(entity).sendSystemMessage(entity.getCombatTracker().getDeathMessage());
@@ -74,7 +60,7 @@ public class CapabilityTameableEntity {
       public static void JoinWorldEvent(EntityJoinLevelEvent event) {
          if (isTameableEntity(event.getEntity())) {
             Mob entity = (Mob)event.getEntity();
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable != null && tameable.isTamed()) {
                if (tameable.getFollowState() == 0 || tameable.getFollowState() == 0) {
                   resetEntityTargetAI(entity);
@@ -96,10 +82,10 @@ public class CapabilityTameableEntity {
       }
 
       @SubscribeEvent
-      public static void EntityUpdateEvent(LivingEvent.LivingTickEvent event) {
+      public static void EntityUpdateEvent(EntityTickEvent.Post event) {
          if (isTameableEntity(event.getEntity())) {
             Mob entity = (Mob)event.getEntity();
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable != null && tameable.isTamed()) {
                if (tameable.getFollowState() == 0) {
                   entity.getNavigation().stop();
@@ -115,12 +101,12 @@ public class CapabilityTameableEntity {
       }
 
       @SubscribeEvent
-      public static void EntityDamageEvent(LivingDamageEvent event) {
+      public static void EntityDamageEvent(LivingDamageEvent.Pre event) {
          if (isTameableEntity(event.getEntity())) {
             Mob entity = (Mob)event.getEntity();
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable != null && tameable.isTamed() && (event.getSource() == entity.damageSources().fellOutOfWorld() || event.getSource() == entity.damageSources().drown() || event.getSource() == entity.damageSources().inFire())) {
-               event.setResult(Event.Result.DENY);
+               event.setNewDamage(0.0F);
             }
          }
       }
@@ -128,9 +114,9 @@ public class CapabilityTameableEntity {
       @SubscribeEvent
       public static void PlayerStartsTrackingEvent(PlayerEvent.StartTracking event) {
          if (!event.getEntity().level().isClientSide && isTameableEntity(event.getTarget())) {
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getTarget(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getTarget(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable.getOwnerId() != null) {
-               MMMessageRegistry.getNetwork().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(event.getTarget().getX(), event.getTarget().getY(), event.getTarget().getZ(), (double)255.0F, event.getEntity().level().dimension())), new MessageMMTameable(event.getTarget().getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
+               MMMessageRegistry.getNetwork().sendToNear((ServerLevel)event.getEntity().level(), event.getTarget().getX(), event.getTarget().getY(), event.getTarget().getZ(), 255.0D, new MessageMMTameable(event.getTarget().getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
             }
          }
       }
@@ -139,17 +125,17 @@ public class CapabilityTameableEntity {
       public static void PlayerInteractEvent(PlayerInteractEvent.EntityInteract event) {
          if (isTameableEntity(event.getTarget()) && event.getHand() == InteractionHand.MAIN_HAND) {
             Mob entity = (Mob)event.getTarget();
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getTarget(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getTarget(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable != null) {
                if (tameable.isTamed() && tameable.getOwner(entity) == event.getEntity()) {
-                  if (event.getItemStack() == ItemStack.EMPTY) {
+                  if (event.getItemStack().isEmpty()) {
                      if (event.getEntity().isShiftKeyDown()) {
                         tameable.setFollowState(tameable.getFollowState() + 1);
                         if (tameable.getFollowState() == 3) {
                            tameable.setFollowState(0);
                         }
 
-                        MMMessageRegistry.getNetwork().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(event.getTarget().getX(), event.getTarget().getY(), event.getTarget().getZ(), (double)255.0F, event.getEntity().level().dimension())), new MessageMMTameable(event.getTarget().getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
+                        MMMessageRegistry.getNetwork().sendToNear((ServerLevel)event.getEntity().level(), event.getTarget().getX(), event.getTarget().getY(), event.getTarget().getZ(), 255.0D, new MessageMMTameable(event.getTarget().getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
                         if (tameable.getFollowState() == 2) {
                            entity.goalSelector.addGoal(3, new EntityAITameableFollowOwner(entity, 1.2, 8.0F, 2.0F));
                         } else {
@@ -175,9 +161,9 @@ public class CapabilityTameableEntity {
                               event.getEntity().sendSystemMessage(Component.translatable("%1$s is now following.", new Object[]{event.getTarget().getDisplayName()}));
                            }
 
-                           MMMessageRegistry.getNetwork().send(PacketDistributor.ALL.noArg(), new MessageMMParticle(particleID, 15, (float)entity.getX() + 0.5F, (float)entity.getY() + 0.5F, (float)entity.getZ() + 0.5F, (double)0.0F, (double)0.0F, (double)0.0F, 0));
+                           MMMessageRegistry.getNetwork().sendToAll(new MessageMMParticle(particleID, 15, (float)entity.getX() + 0.5F, (float)entity.getY() + 0.5F, (float)entity.getZ() + 0.5F, (double)0.0F, (double)0.0F, (double)0.0F, 0));
                         }
-                     } else if (entity.canBeLeashed(event.getEntity()) && !event.getEntity().level().isClientSide) {
+                     } else if (entity.canBeLeashed() && !event.getEntity().level().isClientSide) {
                         entity.setLeashedTo(event.getEntity(), true);
                      }
                   } else if (MMTameableEntries.tameableEntries.containsKey(entity.getClass())) {
@@ -219,18 +205,18 @@ public class CapabilityTameableEntity {
          tameable.setOwner(owner.getUUID());
          tameable.setTamed(true);
          tameable.setFollowState(2);
-         MMMessageRegistry.getNetwork().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(entity.getX(), entity.getY(), entity.getZ(), (double)255.0F, owner.level().dimension())), new MessageMMTameable(entity.getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
+         MMMessageRegistry.getNetwork().sendToNear((ServerLevel)owner.level(), entity.getX(), entity.getY(), entity.getZ(), 255.0D, new MessageMMTameable(entity.getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
          updateEntityTargetAI(entity);
          entity.goalSelector.addGoal(3, new EntityAITameableFollowOwner(entity, 1.2, 8.0F, 2.0F));
          playHealEffect(entity);
       }
 
       @SubscribeEvent
-      public static void EntityDespawnEvent(MobSpawnEvent.AllowDespawn event) {
+      public static void EntityDespawnEvent(MobDespawnEvent event) {
          if (isTameableEntity(event.getEntity())) {
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+            ITameableEntity tameable = EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable != null && tameable.isTamed()) {
-               event.setResult(Event.Result.DENY);
+               event.setResult(MobDespawnEvent.Result.DENY);
             }
          }
       }
@@ -251,7 +237,7 @@ public class CapabilityTameableEntity {
       }
 
       public static boolean isTameableEntity(Entity entity) {
-         return entity != null && entity instanceof Mob && entity.getCapability(CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY).isPresent();
+         return entity != null && entity instanceof Mob && entity.getCapability(CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY) != null;
       }
 
       protected static void playHealEffect(Entity entity) {

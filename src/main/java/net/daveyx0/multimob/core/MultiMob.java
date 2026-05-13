@@ -4,25 +4,23 @@ import java.io.File;
 import java.io.IOException;
 import net.daveyx0.multimob.config.MMConfig;
 import net.daveyx0.multimob.config.MMFactoryGui;
-import net.daveyx0.multimob.entity.IMultiMob;
-import net.daveyx0.multimob.entity.IMultiMobLava;
-import net.daveyx0.multimob.entity.IMultiMobPassive;
-import net.daveyx0.multimob.entity.IMultiMobWater;
 import net.daveyx0.multimob.message.MMMessageRegistry;
 import net.daveyx0.multimob.spawn.MMSpawnRegistry;
 import net.daveyx0.multimob.spawn.MMSpawnerEventHandler;
 import net.daveyx0.multimob.util.FileUtil;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.fml.config.ModConfig;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.asm.enumextension.EnumProxy;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.fml.config.ModConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,27 +30,38 @@ public class MultiMob {
    public static MultiMob instance;
    private File directory;
 
-   public static final MobCategory MULTIMOB_MONSTER = MobCategory.create("MULTIMOB_MONSTER", "multimob_monster", 35, false, false, 128);
-   public static final MobCategory MULTIMOB_PASSIVE = MobCategory.create("MULTIMOB_PASSIVE", "multimob_passive", 10, false, false, 128);
-   public static final MobCategory MULTIMOB_WATER = MobCategory.create("MULTIMOB_WATER", "multimob_water", 10, false, false, 128);
-   public static final MobCategory MULTIMOB_LAVA = MobCategory.create("MULTIMOB_LAVA", "multimob_lava", 5, false, false, 128);
+   public static class MobCategoryEnumParams {
+      public static final EnumProxy<MobCategory> MULTIMOB_MONSTER_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_monster", 35, false, false, 128);
+      public static final EnumProxy<MobCategory> MULTIMOB_PASSIVE_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_passive", 10, false, false, 128);
+      public static final EnumProxy<MobCategory> MULTIMOB_WATER_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_water", 10, false, false, 128);
+      public static final EnumProxy<MobCategory> MULTIMOB_LAVA_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_lava", 5, false, false, 128);
+   }
+
+   public static final MobCategory MULTIMOB_MONSTER = MobCategoryEnumParams.MULTIMOB_MONSTER_PROXY.getValue();
+   public static final MobCategory MULTIMOB_PASSIVE = MobCategoryEnumParams.MULTIMOB_PASSIVE_PROXY.getValue();
+   public static final MobCategory MULTIMOB_WATER = MobCategoryEnumParams.MULTIMOB_WATER_PROXY.getValue();
+   public static final MobCategory MULTIMOB_LAVA = MobCategoryEnumParams.MULTIMOB_LAVA_PROXY.getValue();
 
    public MultiMob() {
       instance = this;
-      IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+      ModLoadingContext context = ModLoadingContext.get();
+      IEventBus modEventBus = context.getActiveContainer().getEventBus();
 
+      MMCapabilities.registerAttachments(modEventBus);
       MMEntityRegistry.init(modEventBus);
 
       modEventBus.addListener(this::commonSetup);
       modEventBus.addListener(this::clientSetup);
       modEventBus.addListener(MMCapabilities::registerCapabilities);
       modEventBus.addListener(MMConfig::onConfigChanged);
+      modEventBus.addListener(MMMessageRegistry::registerPayloads);
 
-      ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, MMConfig.CONFIG_SPEC, "multimob/multimob_spawns.toml");
+      context.getActiveContainer().registerConfig(ModConfig.Type.COMMON, MMConfig.CONFIG_SPEC, "multimob/multimob_spawns.toml");
+      if (FMLEnvironment.dist == Dist.CLIENT) {
+         context.getActiveContainer().registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class, MMFactoryGui.getFactory());
+      }
 
-      MinecraftForge.EVENT_BUS.register(this);
-      MinecraftForge.EVENT_BUS.register(new MMEvents.EntityEventHandler());
-      MinecraftForge.EVENT_BUS.register(new MMSpawnerEventHandler());
+      NeoForge.EVENT_BUS.register(new MMSpawnerEventHandler());
    }
 
    private void commonSetup(final FMLCommonSetupEvent event) {

@@ -12,9 +12,11 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MobSpawnSettings;
+import net.daveyx0.multimob.util.FileUtil;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.tags.TagKey;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 public class MMSpawnRegistry {
    public static final List<MMSpawnEntry> SPAWNS = new ArrayList();
@@ -58,7 +60,7 @@ public class MMSpawnRegistry {
    }
 
    public static MMSpawnEntry getSpawnEntryFromConfig(MMConfigSpawnEntry configEntry) {
-      EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(configEntry.entityName));
+      EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(configEntry.entityName));
       if (entityType != null) {
          return new MMSpawnEntry(configEntry.getEntryName(), entityType, configEntry);
       } else {
@@ -76,8 +78,9 @@ public class MMSpawnRegistry {
 
    public static void addRegularSpawn(MMSpawnEntry entry) {
       if (entry.getSpawnLimit() != 0 && entry.getSpawnWeight() != 0) {
+         HolderLookup.RegistryLookup<Biome> biomeRegistry = FileUtil.getBiomeLookup();
          if ((entry.getBiomes() == null || entry.getBiomes().isEmpty()) && (entry.getBiomeTypes() == null || entry.getBiomeTypes().isEmpty())) {
-            for(Biome biome : ForgeRegistries.BIOMES) {
+            for(Biome biome : biomeRegistry.listElements().map(Holder::value).toList()) {
                // Biome spawn data is now immutable in 1.20.1; spawn additions are handled via BiomeModifier or events
             }
          } else {
@@ -89,21 +92,13 @@ public class MMSpawnRegistry {
             }
 
             if (entry.getBiomeTypes() != null && !entry.getBiomeTypes().isEmpty()) {
-               for(Biome biome : ForgeRegistries.BIOMES) {
+               for(Holder.Reference<Biome> biomeHolder : biomeRegistry.listElements().toList()) {
+                  Biome biome = biomeHolder.value();
                   boolean typeCheck = true;
-                  if (ForgeRegistries.BIOMES.getResourceKey(biome).isPresent()) {
-                     Holder<Biome> biomeHolder = ForgeRegistries.BIOMES.getHolder(ForgeRegistries.BIOMES.getResourceKey(biome).get()).orElse(null);
-                     if (biomeHolder != null) {
-                        for(TagKey<Biome> biomeType : entry.getBiomeTypes()) {
-                           if (!biomeHolder.is(biomeType)) {
-                              typeCheck = false;
-                           }
-                        }
-                     } else {
+                  for(TagKey<Biome> biomeType : entry.getBiomeTypes()) {
+                     if (!biomeHolder.is(biomeType)) {
                         typeCheck = false;
                      }
-                  } else {
-                     typeCheck = false;
                   }
 
                   if (typeCheck) {

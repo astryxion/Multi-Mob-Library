@@ -5,7 +5,7 @@ import java.util.List;
 import net.daveyx0.multimob.core.MultiMob;
 import net.daveyx0.multimob.spawn.MMConfigSpawnEntry;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class MMConfigSpawns {
    private static List<String> defaultEntitiesToSpawn = new ArrayList();
@@ -25,22 +25,22 @@ public class MMConfigSpawns {
    private static int[] dimensionWhiteList;
    private static int[] defaultWhiteList = new int[]{0};
 
-   public static ForgeConfigSpec.IntValue SPAWN_TICK_DELAY;
-   public static ForgeConfigSpec.BooleanValue SPAWN_IN_SPECTATE;
-   public static ForgeConfigSpec.BooleanValue USE_ADDITIONAL_SPAWNING;
-   public static ForgeConfigSpec.IntValue MONSTER_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue PASSIVE_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue WATER_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue LAVA_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue VANILLA_MONSTER_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue VANILLA_CREATURE_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue VANILLA_AMBIENT_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue VANILLA_WATER_SPAWN_LIMIT;
-   public static ForgeConfigSpec.IntValue OTHER_SPAWN_LIMIT;
-   public static ForgeConfigSpec.ConfigValue<List<? extends Integer>> DIMENSION_WHITELIST;
-   public static ForgeConfigSpec.ConfigValue<List<? extends String>> ENTITIES_TO_SPAWN;
+   public static ModConfigSpec.IntValue SPAWN_TICK_DELAY;
+   public static ModConfigSpec.BooleanValue SPAWN_IN_SPECTATE;
+   public static ModConfigSpec.BooleanValue USE_ADDITIONAL_SPAWNING;
+   public static ModConfigSpec.IntValue MONSTER_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue PASSIVE_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue WATER_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue LAVA_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue VANILLA_MONSTER_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue VANILLA_CREATURE_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue VANILLA_AMBIENT_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue VANILLA_WATER_SPAWN_LIMIT;
+   public static ModConfigSpec.IntValue OTHER_SPAWN_LIMIT;
+   public static ModConfigSpec.ConfigValue<List<? extends Integer>> DIMENSION_WHITELIST;
+   public static ModConfigSpec.ConfigValue<List<? extends String>> ENTITIES_TO_SPAWN;
 
-   public static void buildConfig(ForgeConfigSpec.Builder builder) {
+   public static void buildConfig(ModConfigSpec.Builder builder) {
       builder.comment("These options only apply when using the Additional Spawning system, which can also be enabled here.")
          .push("additionalSpawningOptions");
 

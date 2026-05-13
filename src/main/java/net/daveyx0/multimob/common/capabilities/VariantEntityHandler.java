@@ -1,8 +1,11 @@
 package net.daveyx0.multimob.common.capabilities;
 
-import java.util.concurrent.Callable;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 
-public class VariantEntityHandler implements IVariantEntity {
+public class VariantEntityHandler implements IVariantEntity, INBTSerializable<CompoundTag> {
    protected int variantId;
 
    public VariantEntityHandler() {
@@ -21,7 +24,19 @@ public class VariantEntityHandler implements IVariantEntity {
       this.variantId = id;
    }
 
-   private static class Factory implements Callable<IVariantEntity> {
+   @Override
+   public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+      CompoundTag tag = new CompoundTag();
+      tag.putInt("Variant", this.variantId);
+      return tag;
+   }
+
+   @Override
+   public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
+      this.variantId = nbt.getInt("Variant");
+   }
+
+   private static class Factory implements java.util.concurrent.Callable<IVariantEntity> {
       public IVariantEntity call() throws Exception {
          return new VariantEntityHandler();
       }

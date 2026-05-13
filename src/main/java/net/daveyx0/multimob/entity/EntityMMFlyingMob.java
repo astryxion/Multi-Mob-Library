@@ -8,6 +8,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -47,6 +49,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class EntityMMFlyingMob extends Monster implements FlyingAnimal {
    private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(EntityMMBird.class, EntityDataSerializers.INT);
+   private static final ResourceKey<net.minecraft.world.level.storage.loot.LootTable> PARROT_LOOT = ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.withDefaultNamespace("entities/parrot"));
    private static final Item DEADLY_ITEM = Items.COOKIE;
    private static final Set<Item> TAME_ITEMS = Sets.newHashSet(Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS);
    public float flap;
@@ -62,9 +65,9 @@ public class EntityMMFlyingMob extends Monster implements FlyingAnimal {
 
    @Nullable
    @Override
-   public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData, @Nullable CompoundTag dataTag) {
+   public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
       this.setVariant(this.getRandom().nextInt(2));
-      return super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
+      return super.finalizeSpawn(level, difficulty, reason, spawnData);
    }
 
    @Override
@@ -89,9 +92,8 @@ public class EntityMMFlyingMob extends Monster implements FlyingAnimal {
       return pathnavigateflying;
    }
 
-   @Override
    protected float getStandingEyeHeight(Pose pose, EntityDimensions size) {
-      return size.height * 0.6F;
+      return size.height() * 0.6F;
    }
 
    @Override
@@ -217,9 +219,9 @@ public class EntityMMFlyingMob extends Monster implements FlyingAnimal {
    }
 
    @Override
-   protected void defineSynchedData() {
-      super.defineSynchedData();
-      this.entityData.define(VARIANT, 0);
+   protected void defineSynchedData(SynchedEntityData.Builder builder) {
+      super.defineSynchedData(builder);
+      builder.define(VARIANT, 0);
    }
 
    @Override
@@ -235,8 +237,8 @@ public class EntityMMFlyingMob extends Monster implements FlyingAnimal {
    }
 
    @Override
-   protected ResourceLocation getDefaultLootTable() {
-      return new ResourceLocation("minecraft", "entities/parrot");
+   protected ResourceKey<net.minecraft.world.level.storage.loot.LootTable> getDefaultLootTable() {
+      return PARROT_LOOT;
    }
 
    @Override

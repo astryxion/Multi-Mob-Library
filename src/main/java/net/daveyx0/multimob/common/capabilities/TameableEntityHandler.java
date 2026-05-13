@@ -4,10 +4,14 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import net.daveyx0.multimob.util.EntityUtil;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 
-public class TameableEntityHandler implements ITameableEntity {
+public class TameableEntityHandler implements ITameableEntity, INBTSerializable<CompoundTag> {
    protected UUID ownerID;
    protected boolean isTamed;
    protected int followState;
@@ -70,6 +74,28 @@ public class TameableEntityHandler implements ITameableEntity {
 
    public void setFollowState(int set) {
       this.followState = set;
+   }
+
+   @Override
+   public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+      CompoundTag tag = new CompoundTag();
+      if (this.ownerID != null) {
+         tag.putUUID("Owner", this.ownerID);
+      }
+      tag.putBoolean("Tamed", this.isTamed);
+      tag.putInt("FollowState", this.followState);
+      return tag;
+   }
+
+   @Override
+   public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
+      if (nbt.hasUUID("Owner")) {
+         this.ownerID = nbt.getUUID("Owner");
+      } else {
+         this.ownerID = null;
+      }
+      this.isTamed = nbt.getBoolean("Tamed");
+      this.followState = nbt.getInt("FollowState");
    }
 
    private static class Factory implements Callable<ITameableEntity> {

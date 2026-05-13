@@ -30,9 +30,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.fml.ModList;
 
 @OnlyIn(Dist.CLIENT)
 public class ColorUtil {
@@ -67,7 +67,7 @@ public class ColorUtil {
          } else if (sprite != null) {
             String textureName = sprite.contents().name().toString();
             String modelName = textureName.replaceAll(":", ":models/");
-            ModelResourceLocation model = new ModelResourceLocation(new ResourceLocation(modelName), "");
+            ModelResourceLocation model = new ModelResourceLocation(ResourceLocation.parse(modelName), "");
             String topTextureName = "";
             if (model != null) {
                BakedModel bakedModel = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(state);
@@ -261,7 +261,7 @@ public class ColorUtil {
                   greyImage.setPixelRGBA(x, y, (a << 24) | (grey << 16) | (grey << 8) | grey);
                }
             }
-            greyscaleTexture = new ResourceLocation(resource.getNamespace(), resource.getPath());
+            greyscaleTexture = ResourceLocation.fromNamespaceAndPath(resource.getNamespace(), resource.getPath());
             Minecraft.getInstance().getTextureManager().register(greyscaleTexture, new DynamicTexture(greyImage));
             nativeImage.close();
          }

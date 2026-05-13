@@ -1,18 +1,20 @@
 package net.daveyx0.multimob.message;
 
 import java.util.Random;
-import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public class MessageMMParticle {
+public class MessageMMParticle implements CustomPacketPayload {
+   public static final CustomPacketPayload.Type<MessageMMParticle> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("multimob", "particle"));
+   public static final StreamCodec<RegistryFriendlyByteBuf, MessageMMParticle> STREAM_CODEC = StreamCodec.ofMember(MessageMMParticle::encode, MessageMMParticle::decode);
    int id;
    int amount;
    int block;
@@ -64,13 +66,13 @@ public class MessageMMParticle {
       buf.writeDouble(msg.zVel);
    }
 
-   public static void handle(MessageMMParticle message, Supplier<NetworkEvent.Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+   public static void handle(MessageMMParticle message, IPayloadContext ctx) {
+      ctx.enqueueWork(() -> {
+         if (FMLEnvironment.dist.isClient()) {
             if (message.amount > 0 && Minecraft.getInstance().level != null) {
                for (int i = 0; i < message.amount; ++i) {
                   Random rand = new Random();
-                  SimpleParticleType particleType = getParticleById(message.id);
+                  net.minecraft.core.particles.ParticleOptions particleType = getParticleById(message.id);
                   if (particleType != null) {
                      Minecraft.getInstance().level.addParticle(particleType,
                         (double)(message.x + (rand.nextFloat() - rand.nextFloat())),
@@ -80,12 +82,16 @@ public class MessageMMParticle {
                   }
                }
             }
-         });
+         }
       });
-      ctx.get().setPacketHandled(true);
    }
 
-   private static SimpleParticleType getParticleById(int id) {
+   @Override
+   public Type<? extends CustomPacketPayload> type() {
+      return TYPE;
+   }
+
+   private static net.minecraft.core.particles.ParticleOptions getParticleById(int id) {
       switch (id) {
          case 0: return ParticleTypes.EXPLOSION;
          case 1: return ParticleTypes.EXPLOSION_EMITTER;
@@ -100,8 +106,8 @@ public class MessageMMParticle {
          case 10: return ParticleTypes.LARGE_SMOKE;
          case 11: return ParticleTypes.EFFECT;
          case 12: return ParticleTypes.INSTANT_EFFECT;
-         case 13: return ParticleTypes.ENTITY_EFFECT;
-         case 14: return ParticleTypes.AMBIENT_ENTITY_EFFECT;
+         case 13: return ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 1.0F, 1.0F, 1.0F);
+         case 14: return ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0.5F, 0.5F, 0.5F);
          case 15: return ParticleTypes.WITCH;
          case 16: return ParticleTypes.DRIPPING_WATER;
          case 17: return ParticleTypes.DRIPPING_LAVA;

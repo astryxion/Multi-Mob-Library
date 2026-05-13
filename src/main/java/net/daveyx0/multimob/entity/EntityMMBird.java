@@ -8,6 +8,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -56,10 +58,11 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.ForgeEventFactory;
+import net.neoforged.neoforge.event.EventHooks;
 
 public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(EntityMMBird.class, EntityDataSerializers.INT);
+    private static final ResourceKey<net.minecraft.world.level.storage.loot.LootTable> PARROT_LOOT = ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.withDefaultNamespace("entities/parrot"));
     private static final Item DEADLY_ITEM = Items.COOKIE;
     private static final Set<Item> TAME_ITEMS = Sets.newHashSet(Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS);
     public float flap;
@@ -76,9 +79,9 @@ public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
 
     @Nullable
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData groupData, @Nullable CompoundTag tag) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData groupData) {
         this.setVariant(this.getRandom().nextInt(2));
-        return super.finalizeSpawn(level, difficulty, reason, groupData, tag);
+        return super.finalizeSpawn(level, difficulty, reason, groupData);
     }
 
     @Override
@@ -87,7 +90,7 @@ public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
-        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 5.0F, 1.0F, true));
+        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.0D, 5.0F, 1.0F));
         this.goalSelector.addGoal(2, new WaterAvoidingRandomFlyingGoal(this, 1.0D));
         this.goalSelector.addGoal(3, new LandOnOwnersShoulderGoal(this));
         this.goalSelector.addGoal(3, new FollowMobGoal(this, 1.0D, 3.0F, 7.0F));
@@ -109,9 +112,8 @@ public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
         return flyingpathnavigation;
     }
 
-    @Override
     protected float getStandingEyeHeight(Pose pose, EntityDimensions dimensions) {
-        return dimensions.height * 0.6F;
+        return dimensions.height() * 0.6F;
     }
 
     @Override
@@ -154,7 +156,7 @@ public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
             }
 
             if (!this.level().isClientSide) {
-                if (this.getRandom().nextInt(10) == 0 && !ForgeEventFactory.onAnimalTame(this, player)) {
+                if (this.getRandom().nextInt(10) == 0 && !EventHooks.onAnimalTame(this, player)) {
                     this.tame(player);
                     this.level().broadcastEntityEvent(this, (byte)7);
                 } else {
@@ -305,9 +307,9 @@ public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(VARIANT, 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(VARIANT, 0);
     }
 
     @Override
@@ -323,8 +325,8 @@ public class EntityMMBird extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    protected ResourceLocation getDefaultLootTable() {
-        return new ResourceLocation("minecraft", "entities/parrot");
+    protected ResourceKey<net.minecraft.world.level.storage.loot.LootTable> getDefaultLootTable() {
+        return PARROT_LOOT;
     }
 
     @Override

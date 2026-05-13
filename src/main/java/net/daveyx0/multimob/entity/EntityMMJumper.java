@@ -18,11 +18,12 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 public class EntityMMJumper extends Animal {
    public int maxJumpDuration = 10;
@@ -69,7 +70,7 @@ public class EntityMMJumper extends Animal {
    }
 
    @Override
-   protected void jumpFromGround() {
+   public void jumpFromGround() {
       super.jumpFromGround();
       double d0 = this.moveControl.getSpeedModifier();
       if (d0 > 0.0D) {
@@ -199,6 +200,11 @@ public class EntityMMJumper extends Animal {
    @Override
    public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
       return null;
+   }
+
+   @Override
+   public boolean isFood(ItemStack stack) {
+      return false;
    }
 
    public static class AIPanic extends PanicGoal {

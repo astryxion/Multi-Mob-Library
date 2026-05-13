@@ -8,7 +8,9 @@ import javax.annotation.Nullable;
 import net.daveyx0.multimob.core.MMEntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -27,7 +29,7 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.common.capabilities.Capability;
+import net.neoforged.neoforge.capabilities.EntityCapability;
 
 public class EntityUtil {
    public static Predicate<Entity> isNotPlayer() {
@@ -67,7 +69,7 @@ public class EntityUtil {
    public static ItemStack getCustomLootItem(Entity entityIn, ResourceLocation resourceLootTable, ItemStack defaultItem) {
       if (resourceLootTable != null && entityIn.level() instanceof ServerLevel) {
          ServerLevel serverLevel = (ServerLevel) entityIn.level();
-         LootTable loottable = serverLevel.getServer().getLootData().getLootTable(resourceLootTable);
+         LootTable loottable = serverLevel.getServer().reloadableRegistries().getLootTable(ResourceKey.create(Registries.LOOT_TABLE, resourceLootTable));
          LootParams lootparams = new LootParams.Builder(serverLevel)
             .withParameter(LootContextParams.THIS_ENTITY, entityIn)
             .withParameter(LootContextParams.ORIGIN, entityIn.position())
@@ -84,9 +86,9 @@ public class EntityUtil {
    }
 
    @Nullable
-   public static <T> T getCapability(@Nullable Entity entity, Capability<T> capability, @Nullable Direction facing) {
+   public static <T> T getCapability(@Nullable Entity entity, EntityCapability<T, Void> capability, @Nullable Direction facing) {
       if (entity != null) {
-         return entity.getCapability(capability).orElse(null);
+         return entity.getCapability(capability);
       }
       return null;
    }
@@ -96,7 +98,7 @@ public class EntityUtil {
       ItemStack[] arrayOfItems = null;
       if (resourceLootTable != null && entityIn.level() instanceof ServerLevel) {
          ServerLevel serverLevel = (ServerLevel) entityIn.level();
-         LootTable loottable = serverLevel.getServer().getLootData().getLootTable(resourceLootTable);
+         LootTable loottable = serverLevel.getServer().reloadableRegistries().getLootTable(ResourceKey.create(Registries.LOOT_TABLE, resourceLootTable));
          LootParams lootparams = new LootParams.Builder(serverLevel)
             .withParameter(LootContextParams.THIS_ENTITY, entityIn)
             .withParameter(LootContextParams.ORIGIN, entityIn.position())

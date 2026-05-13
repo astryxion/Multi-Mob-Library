@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -39,10 +40,10 @@ public class EntityMMFlyingCreature extends PathfinderMob implements FlyingAnima
 	public boolean doHurtTarget(Entity entityIn) {
 		float f = (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE);
 		int i = 0;
+		net.minecraft.core.HolderLookup.RegistryLookup<net.minecraft.world.item.enchantment.Enchantment> enchantments = this.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
 
 		if (entityIn instanceof LivingEntity) {
-			f += EnchantmentHelper.getDamageBonus(this.getMainHandItem(), ((LivingEntity) entityIn).getMobType());
-			i += EnchantmentHelper.getKnockbackBonus(this);
+			i += EnchantmentHelper.getItemEnchantmentLevel(enchantments.getOrThrow(Enchantments.KNOCKBACK), this.getMainHandItem());
 		}
 
 		boolean flag = entityIn.hurt(this.damageSources().mobAttack(this), f);
@@ -54,10 +55,10 @@ public class EntityMMFlyingCreature extends PathfinderMob implements FlyingAnima
 				this.setDeltaMovement(motion.x * 0.6D, motion.y, motion.z * 0.6D);
 			}
 
-			int j = EnchantmentHelper.getFireAspect(this);
+			int j = EnchantmentHelper.getItemEnchantmentLevel(enchantments.getOrThrow(Enchantments.FIRE_ASPECT), this.getMainHandItem());
 
 			if (j > 0) {
-				entityIn.setSecondsOnFire(j * 4);
+				entityIn.igniteForSeconds((float)(j * 4));
 			}
 
 			if (entityIn instanceof Player) {
@@ -66,7 +67,7 @@ public class EntityMMFlyingCreature extends PathfinderMob implements FlyingAnima
 				ItemStack itemstack1 = entityplayer.isUsingItem() ? entityplayer.getUseItem() : ItemStack.EMPTY;
 
 				if (!itemstack.isEmpty() && !itemstack1.isEmpty() && itemstack.getItem() instanceof AxeItem && itemstack1.getItem() instanceof ShieldItem) {
-					float f1 = 0.25F + (float) EnchantmentHelper.getBlockEfficiency(this) * 0.05F;
+					float f1 = 0.25F + (float) EnchantmentHelper.getItemEnchantmentLevel(enchantments.getOrThrow(Enchantments.EFFICIENCY), this.getMainHandItem()) * 0.05F;
 
 					if (this.random.nextFloat() < f1) {
 						entityplayer.getCooldowns().addCooldown(Items.SHIELD, 100);
@@ -75,7 +76,9 @@ public class EntityMMFlyingCreature extends PathfinderMob implements FlyingAnima
 				}
 			}
 
-			this.doEnchantDamageEffects(this, entityIn);
+			if (!this.level().isClientSide && this.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+				EnchantmentHelper.doPostAttackEffects(serverLevel, entityIn, this.damageSources().mobAttack(this));
+			}
 		}
 
 		return flag;

@@ -6,13 +6,12 @@ import net.daveyx0.multimob.common.MMCommonProxy;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.function.Supplier;
 
-@Mod.EventBusSubscriber(value = Dist.CLIENT, modid = "multimob")
 public class MMClientProxy extends MMCommonProxy {
    private final Minecraft MINECRAFT = Minecraft.getInstance();
 
@@ -34,11 +33,11 @@ public class MMClientProxy extends MMCommonProxy {
    }
 
    @Override
-   public Player getPlayer(Supplier<NetworkEvent.Context> context) {
-      if (context.get().getDirection().getReceptionSide().isClient()) {
+   public Player getPlayer(Supplier<IPayloadContext> context) {
+      if (context.get().flow().isClientbound()) {
          return this.MINECRAFT.player;
       } else {
-         return context.get().getSender();
+         return context.get().player();
       }
    }
 }

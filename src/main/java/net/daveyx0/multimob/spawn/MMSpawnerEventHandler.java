@@ -11,19 +11,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelData;
-import net.minecraftforge.event.entity.living.LivingPackSizeEvent;
-import net.minecraftforge.event.entity.living.MobSpawnEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.event.TickEvent;
+import net.neoforged.neoforge.event.entity.living.SpawnClusterSizeEvent;
+import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 public class MMSpawnerEventHandler {
    private MMWorldSpawner worldSpawner = null;
 
    @SubscribeEvent
-   public void onWorldTickEvent(TickEvent.LevelTickEvent event) {
-      if (event.phase == TickEvent.Phase.START && event.level instanceof ServerLevel) {
-         ServerLevel worldServer = (ServerLevel)event.level;
+   public void onWorldTickEvent(LevelTickEvent.Pre event) {
+      if (event.getLevel() instanceof ServerLevel) {
+         ServerLevel worldServer = (ServerLevel)event.getLevel();
          if (MMConfigSpawns.getUseAdditionalSpawning()) {
             if (this.worldSpawner == null) {
                this.worldSpawner = new MMWorldSpawner();
@@ -41,10 +40,10 @@ public class MMSpawnerEventHandler {
    }
 
    @SubscribeEvent
-   public void onCheckSpawn(MobSpawnEvent.FinalizeSpawn event) {
-      if (event.getSpawner() == null && event.getResult() != Event.Result.DENY) {
+   public void onCheckSpawn(MobSpawnEvent.PositionCheck event) {
+      if (event.getSpawner() == null && event.getResult() != MobSpawnEvent.PositionCheck.Result.FAIL) {
          if (event.getEntity() instanceof EntityDummy) {
-            event.setResult(Event.Result.DENY);
+            event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
          }
 
          List<MMSpawnEntry> spawnEntries = new ArrayList();
@@ -59,24 +58,25 @@ public class MMSpawnerEventHandler {
             MMSpawnEntry entry = (MMSpawnEntry)spawnEntries.get(event.getLevel().getRandom().nextInt(spawnEntries.size()));
             if (entry != null) {
                if (entry.getVariantID() != 0 && CapabilityVariantEntity.EventHandler.hasVariant(event.getEntity())) {
-                  event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY).ifPresent(variant -> {
+                  IVariantEntity variant = event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY);
+                  if (variant != null) {
                      variant.setVariant(entry.getVariantID());
-                  });
+                  }
                }
 
                if (event.getLevel() instanceof ServerLevel && MMSpawnChecks.performSpawnChecks((ServerLevel)event.getLevel(), new BlockPos((int)event.getX(), (int)event.getY(), (int)event.getZ()), entry)) {
                   if (!entry.getOverrideCanGetSpawnHere()) {
-                     event.setResult(Event.Result.DEFAULT);
+                     event.setResult(MobSpawnEvent.PositionCheck.Result.DEFAULT);
                      return;
                   }
 
                   if (MMSpawnChecks.canEntitySpawnHere(event.getEntity(), entry)) {
-                     event.setResult(Event.Result.ALLOW);
+                     event.setResult(MobSpawnEvent.PositionCheck.Result.SUCCEED);
                   } else {
-                     event.setResult(Event.Result.DENY);
+                     event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
                   }
                } else {
-                  event.setResult(Event.Result.DENY);
+                  event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
                }
             }
 
@@ -85,11 +85,10 @@ public class MMSpawnerEventHandler {
    }
 
    @SubscribeEvent
-   public void onLivingPackSizeEvent(LivingPackSizeEvent event) {
+   public void onLivingPackSizeEvent(SpawnClusterSizeEvent event) {
       MMSpawnEntry entry = MMSpawnRegistry.getSpawnEntryFromEntityType(event.getEntity().getType());
       if (entry != null && entry.getGroupSizeRange() != null && entry.getGroupSizeRange()[1] > 0) {
-         event.setMaxPackSize(entry.getGroupSizeRange()[1]);
-         event.setResult(Event.Result.ALLOW);
+         event.setSize(entry.getGroupSizeRange()[1]);
       }
 
    }

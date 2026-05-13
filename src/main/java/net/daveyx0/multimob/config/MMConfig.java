@@ -3,17 +3,17 @@ package net.daveyx0.multimob.config;
 import java.util.HashSet;
 import net.daveyx0.multimob.spawn.MMConfigSpawnEntry;
 import net.daveyx0.multimob.spawn.MMSpawnRegistry;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.event.config.ModConfigEvent;
 
 public class MMConfig {
-   public static ForgeConfigSpec CONFIG_SPEC;
+   public static ModConfigSpec CONFIG_SPEC;
    public static final HashSet<MMConfigSpawnEntry> CONFIGSPAWNS = new HashSet();
    public static final HashSet<MMConfigSpawnEntry> EXTERNALCONFIGSPAWNS = new HashSet();
 
    static {
-      ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+      ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
       MMConfigSpawns.buildConfig(builder);
       CONFIG_SPEC = builder.build();
    }

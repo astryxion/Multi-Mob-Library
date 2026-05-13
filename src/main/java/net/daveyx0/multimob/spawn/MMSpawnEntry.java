@@ -3,7 +3,8 @@ package net.daveyx0.multimob.spawn;
 import java.util.List;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.SpawnPlacementType;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.TagKey;
@@ -12,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 public class MMSpawnEntry {
    private String entryName;
    private EntityType<?> entityType;
-   private SpawnPlacements.Type spawnType;
+   private SpawnPlacementType spawnType;
    private String spawnTypeString;
    private WeatherCondition weatherCondition;
    private MobCategory creatureType;
@@ -92,7 +93,7 @@ public class MMSpawnEntry {
       return this.additionalRarity;
    }
 
-   public SpawnPlacements.Type getSpawnPlacementType() {
+   public SpawnPlacementType getSpawnPlacementType() {
       return this.spawnType;
    }
 

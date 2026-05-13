@@ -17,7 +17,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
-import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.SpawnPlacementType;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -26,8 +27,8 @@ import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraftforge.event.ForgeEventFactory;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.neoforge.event.EventHooks;
+import net.neoforged.bus.api.Event;
 
 public class MMWorldSpawner {
    private static final int MOB_COUNT_DIV = (int)Math.pow((double)17.0F, (double)2.0F);
@@ -149,9 +150,9 @@ public class MMWorldSpawner {
 
                                        if (entityliving != null) {
                                           entityliving.moveTo((double)f, (double)i3, (double)f1, worldServerIn.random.nextFloat() * 360.0F, 0.0F);
-                                          boolean canSpawn = ForgeEventFactory.checkSpawnPosition(entityliving, worldServerIn, MobSpawnType.NATURAL);
+                                          boolean canSpawn = EventHooks.checkSpawnPosition(entityliving, worldServerIn, MobSpawnType.NATURAL);
                                           if (canSpawn) {
-                                             ientitylivingdata = ForgeEventFactory.onFinalizeSpawn(entityliving, worldServerIn, worldServerIn.getCurrentDifficultyAt(new BlockPos(entityliving.blockPosition())), MobSpawnType.NATURAL, ientitylivingdata, null);
+                                             ientitylivingdata = EventHooks.finalizeMobSpawn(entityliving, worldServerIn, worldServerIn.getCurrentDifficultyAt(new BlockPos(entityliving.blockPosition())), MobSpawnType.NATURAL, ientitylivingdata);
 
                                              if (entityliving.checkSpawnObstruction(worldServerIn)) {
                                                 ++j2;
@@ -160,7 +161,7 @@ public class MMWorldSpawner {
                                                 entityliving.discard();
                                              }
 
-                                             if (j2 >= ForgeEventFactory.getMaxSpawnPackSize(entityliving)) {
+                                             if (j2 >= entityliving.getMaxSpawnClusterSize()) {
                                                 continue label153;
                                              }
                                           }
@@ -203,12 +204,12 @@ public class MMWorldSpawner {
       }
    }
 
-   public static boolean canCreatureTypeSpawnAtLocation(SpawnPlacements.Type spawnPlacementTypeIn, Level worldIn, BlockPos pos) {
+   public static boolean canCreatureTypeSpawnAtLocation(SpawnPlacementType spawnPlacementTypeIn, Level worldIn, BlockPos pos) {
       if (!worldIn.getWorldBorder().isWithinBounds(pos)) {
          return false;
       }
       BlockState blockState = worldIn.getBlockState(pos);
-      if (spawnPlacementTypeIn == SpawnPlacements.Type.IN_WATER) {
+      if (spawnPlacementTypeIn == SpawnPlacementTypes.IN_WATER) {
          return worldIn.getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER) && !blockState.isCollisionShapeFullBlock(worldIn, pos);
       } else {
          BlockPos below = pos.below();
@@ -216,7 +217,7 @@ public class MMWorldSpawner {
       }
    }
 
-   public static boolean canCreatureTypeSpawnBody(SpawnPlacements.Type spawnPlacementTypeIn, Level worldIn, BlockPos pos, String spawnTypeString) {
+   public static boolean canCreatureTypeSpawnBody(SpawnPlacementType spawnPlacementTypeIn, Level worldIn, BlockPos pos, String spawnTypeString) {
       return MMSpawnChecks.canCreatureTypeSpawnHere(worldIn, pos, spawnPlacementTypeIn, spawnTypeString);
    }
 
@@ -260,14 +261,14 @@ public class MMWorldSpawner {
                         continue;
                      }
 
-                     boolean canSpawn = ForgeEventFactory.checkSpawnPosition(entityliving, (ServerLevel)worldIn, MobSpawnType.NATURAL);
+                     boolean canSpawn = EventHooks.checkSpawnPosition(entityliving, (ServerLevel)worldIn, MobSpawnType.NATURAL);
                      if (!canSpawn) {
                         continue;
                      }
 
                      entityliving.moveTo((double)((float)j + 0.5F), (double)blockpos.getY(), (double)((float)k + 0.5F), randomIn.nextFloat() * 360.0F, 0.0F);
                      worldIn.addFreshEntity(entityliving);
-                     ientitylivingdata = entityliving.finalizeSpawn((ServerLevel)worldIn, worldIn.getCurrentDifficultyAt(new BlockPos(entityliving.blockPosition())), MobSpawnType.NATURAL, ientitylivingdata, null);
+                     ientitylivingdata = entityliving.finalizeSpawn((ServerLevel)worldIn, worldIn.getCurrentDifficultyAt(new BlockPos(entityliving.blockPosition())), MobSpawnType.NATURAL, ientitylivingdata);
                      flag = true;
                   }
 

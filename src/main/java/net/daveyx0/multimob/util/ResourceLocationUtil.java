@@ -20,7 +20,7 @@ public class ResourceLocationUtil {
       }
 
       try {
-         Optional<Resource> optionalResource = resourceManager.getResource(new ResourceLocation(domain, filename));
+         Optional<Resource> optionalResource = resourceManager.getResource(ResourceLocation.fromNamespaceAndPath(domain, filename));
          return optionalResource.orElse(null);
       } catch (Exception var3) {
          return null;

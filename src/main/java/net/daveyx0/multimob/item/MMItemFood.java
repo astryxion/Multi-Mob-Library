@@ -7,7 +7,7 @@ public class MMItemFood extends Item {
    public MMItemFood(int amount, float saturation, boolean isWolfFood, Item.Properties properties) {
       super(properties.food(new FoodProperties.Builder()
          .nutrition(amount)
-         .saturationMod(saturation)
+         .saturationModifier(saturation)
          .build()));
    }
 }

@@ -2,51 +2,48 @@ package net.daveyx0.multimob.capabilities;
 
 import javax.annotation.Nullable;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.INBTSerializable;
-import net.minecraftforge.common.util.LazyOptional;
+import net.minecraft.world.entity.Entity;
+import net.neoforged.neoforge.capabilities.EntityCapability;
+import net.neoforged.neoforge.capabilities.ICapabilityProvider;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 
-public class CapabilityProviderSerializable<H> implements ICapabilityProvider, INBTSerializable<Tag> {
-   protected final Capability<H> capability;
+public class CapabilityProviderSerializable<H> implements ICapabilityProvider<Entity, Void, H>, INBTSerializable<Tag> {
+   protected final EntityCapability<H, Void> capability;
    protected final Direction facing;
    protected final H instance;
-   protected final LazyOptional<H> lazyOptional;
 
-   public CapabilityProviderSerializable(Capability<H> capability, @Nullable Direction facing, @Nullable H instance) {
+   public CapabilityProviderSerializable(EntityCapability<H, Void> capability, @Nullable Direction facing, @Nullable H instance) {
       this.capability = capability;
       this.facing = facing;
       this.instance = instance;
-      this.lazyOptional = LazyOptional.of(() -> this.instance);
    }
 
-   public CapabilityProviderSerializable(Capability<H> capability, @Nullable Direction facing) {
+   public CapabilityProviderSerializable(EntityCapability<H, Void> capability, @Nullable Direction facing) {
       this(capability, facing, null);
    }
 
-   public CapabilityProviderSerializable(Capability<H> capability) {
+   public CapabilityProviderSerializable(EntityCapability<H, Void> capability) {
       this(capability, (Direction)null, null);
    }
 
-   public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction facing) {
-      if (capability == this.getCapabilityInstance()) {
-         return this.lazyOptional.cast();
-      }
-      return LazyOptional.empty();
+   @Nullable
+   public H getCapability(Entity object, Void context) {
+      return this.instance;
    }
 
-   public Tag serializeNBT() {
+   public Tag serializeNBT(HolderLookup.Provider provider) {
       if (this.instance instanceof INBTSerializable) {
-         return ((INBTSerializable)this.instance).serializeNBT();
+         return ((INBTSerializable)this.instance).serializeNBT(provider);
       }
       return new CompoundTag();
    }
 
-   public void deserializeNBT(Tag nbt) {
+   public void deserializeNBT(HolderLookup.Provider provider, Tag nbt) {
       if (this.instance instanceof INBTSerializable) {
-         ((INBTSerializable)this.instance).deserializeNBT(nbt);
+         ((INBTSerializable)this.instance).deserializeNBT(provider, nbt);
       }
    }
 
@@ -55,7 +52,7 @@ public class CapabilityProviderSerializable<H> implements ICapabilityProvider, I
       return this.facing;
    }
 
-   public final Capability<H> getCapabilityInstance() {
+   public final EntityCapability<H, Void> getCapabilityInstance() {
       return this.capability;
    }
 

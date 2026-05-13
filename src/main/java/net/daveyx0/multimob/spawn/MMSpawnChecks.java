@@ -13,7 +13,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.SpawnPlacementType;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.NaturalSpawner;
@@ -27,7 +28,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 public class MMSpawnChecks {
    private static final int distanceCheck = 10;
@@ -107,7 +108,7 @@ public class MMSpawnChecks {
    public static boolean isInsideSuitableStructure(ServerLevel worldIn, BlockPos pos, List<String> structures) {
       if (structures != null && !structures.isEmpty()) {
          for(String entry : structures) {
-            TagKey<net.minecraft.world.level.levelgen.structure.Structure> structureTag = TagKey.create(Registries.STRUCTURE, new ResourceLocation(entry.toLowerCase()));
+            TagKey<net.minecraft.world.level.levelgen.structure.Structure> structureTag = TagKey.create(Registries.STRUCTURE, ResourceLocation.parse(entry.toLowerCase()));
             if (worldIn.structureManager().getStructureWithPieceAt(pos, structureTag).isValid()) {
                return true;
             }
@@ -252,13 +253,13 @@ public class MMSpawnChecks {
       return check ? true : worldIn.getDifficulty() != Difficulty.PEACEFUL;
    }
 
-   public static boolean canCreatureTypeSpawnHere(Level worldIn, BlockPos pos, SpawnPlacements.Type spawnType, String spawnTypeString) {
+   public static boolean canCreatureTypeSpawnHere(Level worldIn, BlockPos pos, SpawnPlacementType spawnType, String spawnTypeString) {
       BlockState iblockstate = worldIn.getBlockState(pos);
       if (spawnTypeString != null && spawnTypeString.equals("LAVA")) {
          FluidState fluidState = worldIn.getFluidState(pos);
          FluidState fluidBelow = worldIn.getFluidState(pos.below());
          return fluidState.getType() == Fluids.LAVA && fluidBelow.getType() == Fluids.LAVA && !worldIn.getBlockState(pos.above()).isCollisionShapeFullBlock(worldIn, pos.above());
-      } else if (spawnType == SpawnPlacements.Type.IN_WATER) {
+      } else if (spawnType == SpawnPlacementTypes.IN_WATER) {
          FluidState fluidState = worldIn.getFluidState(pos);
          FluidState fluidBelow = worldIn.getFluidState(pos.below());
          return fluidState.getType() == Fluids.WATER && fluidBelow.getType() == Fluids.WATER && !worldIn.getBlockState(pos.above()).isCollisionShapeFullBlock(worldIn, pos.above());
