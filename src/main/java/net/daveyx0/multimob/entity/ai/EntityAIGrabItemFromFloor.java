@@ -42,7 +42,6 @@ public class EntityAIGrabItemFromFloor extends Goal {
       } else if (!this.temptedEntity.getMainHandItem().isEmpty()) {
          return false;
       } else {
-         List<Entity> list = this.temptedEntity.level().getEntities(this.temptedEntity, this.temptedEntity.getBoundingBox().inflate(10.0D, 10.0D, 10.0D));
          if (this.stealDelay > 0) {
             --this.stealDelay;
             if (this.stealDelay == 0) {
@@ -50,23 +49,19 @@ public class EntityAIGrabItemFromFloor extends Goal {
             }
 
             return false;
-         } else {
-            if (list != null && list.size() > 0) {
-               for(int i = 0; i < list.size(); ++i) {
-                  Entity entity = list.get(i);
-                  if (entity != null && entity instanceof ItemEntity) {
-                     ItemEntity item = (ItemEntity)entity;
-                     ItemStack stack = item.getItem();
-                     if (!stack.isEmpty() && this.isTempting(stack)) {
-                        this.temptingItem = item;
-                        return true;
-                     }
-                  }
-               }
-            }
-
-            return false;
          }
+
+         List<ItemEntity> list = this.temptedEntity.level().getEntitiesOfClass(ItemEntity.class, this.temptedEntity.getBoundingBox().inflate(10.0D, 10.0D, 10.0D));
+
+         for (ItemEntity item : list) {
+            ItemStack stack = item.getItem();
+            if (!stack.isEmpty() && this.isTempting(stack)) {
+               this.temptingItem = item;
+               return true;
+            }
+         }
+
+         return false;
       }
    }
 

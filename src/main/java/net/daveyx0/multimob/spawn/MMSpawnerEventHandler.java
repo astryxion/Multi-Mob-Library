@@ -10,6 +10,7 @@ import net.daveyx0.multimob.util.EntityUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraftforge.event.entity.living.LivingPackSizeEvent;
 import net.minecraftforge.event.entity.living.MobSpawnEvent;
@@ -56,25 +57,26 @@ public class MMSpawnerEventHandler {
          }
 
          if (spawnEntries != null && !spawnEntries.isEmpty()) {
-            MMSpawnEntry entry = (MMSpawnEntry)spawnEntries.get(event.getLevel().getRandom().nextInt(spawnEntries.size()));
-            if (entry != null) {
-               if (entry.getVariantID() != 0 && CapabilityVariantEntity.EventHandler.hasVariant(event.getEntity())) {
+            BlockPos spawnPos = BlockPos.containing(event.getX(), event.getY(), event.getZ());
+            MMSpawnEntry entry = null;
+            if (event.getLevel() instanceof ServerLevel serverLevel && event.getEntity() instanceof Mob) {
+               entry = selectSpawnEntry(serverLevel, spawnEntries, (Mob)event.getEntity(), spawnPos);
+            }
+
+            if (entry == null) {
+               event.setResult(Event.Result.DENY);
+            } else {
+               final MMSpawnEntry selectedEntry = entry;
+               if (selectedEntry.getVariantID() != 0 && CapabilityVariantEntity.EventHandler.hasVariant(event.getEntity())) {
                   event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY).ifPresent(variant -> {
-                     variant.setVariant(entry.getVariantID());
+                     variant.setVariant(selectedEntry.getVariantID());
                   });
                }
 
-               if (event.getLevel() instanceof ServerLevel && MMSpawnChecks.performSpawnChecks((ServerLevel)event.getLevel(), new BlockPos((int)event.getX(), (int)event.getY(), (int)event.getZ()), entry)) {
-                  if (!entry.getOverrideCanGetSpawnHere()) {
-                     event.setResult(Event.Result.DEFAULT);
-                     return;
-                  }
-
-                  if (MMSpawnChecks.canEntitySpawnHere(event.getEntity(), entry)) {
-                     event.setResult(Event.Result.ALLOW);
-                  } else {
-                     event.setResult(Event.Result.DENY);
-                  }
+               if (!selectedEntry.getOverrideCanGetSpawnHere()) {
+                  event.setResult(Event.Result.DEFAULT);
+               } else if (MMSpawnChecks.canEntitySpawnHere(event.getEntity(), selectedEntry)) {
+                  event.setResult(Event.Result.ALLOW);
                } else {
                   event.setResult(Event.Result.DENY);
                }
@@ -82,6 +84,45 @@ public class MMSpawnerEventHandler {
 
          }
       }
+   }
+
+   private static MMSpawnEntry selectSpawnEntry(ServerLevel level, List<MMSpawnEntry> spawnEntries, Mob mob, BlockPos pos) {
+      List<MMSpawnEntry> passing = new ArrayList<>();
+
+      for (MMSpawnEntry candidate : spawnEntries) {
+         if (!MMSpawnChecks.performSpawnChecks(level, pos, candidate)) {
+            continue;
+         }
+
+         if (!candidate.getOverrideCanGetSpawnHere() || MMSpawnChecks.canEntitySpawnHere(mob, candidate)) {
+            passing.add(candidate);
+         }
+      }
+
+      if (passing.isEmpty()) {
+         return null;
+      }
+
+      if (passing.size() == 1) {
+         return passing.get(0);
+      }
+
+      int totalWeight = 0;
+
+      for (MMSpawnEntry candidate : passing) {
+         totalWeight += Math.max(1, candidate.getSpawnWeight());
+      }
+
+      int roll = level.getRandom().nextInt(totalWeight);
+
+      for (MMSpawnEntry candidate : passing) {
+         roll -= Math.max(1, candidate.getSpawnWeight());
+         if (roll < 0) {
+            return candidate;
+         }
+      }
+
+      return passing.get(passing.size() - 1);
    }
 
    @SubscribeEvent

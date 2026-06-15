@@ -12,6 +12,7 @@ import net.daveyx0.multimob.message.MessageMMTameable;
 import net.daveyx0.multimob.util.EntityUtil;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -54,8 +55,14 @@ public class CapabilityTameableEntity {
    public static class EventHandler {
       @SubscribeEvent
       public static void AttachEntityCapabilitiesEvent(AttachCapabilitiesEvent<Entity> event) {
-         if (event.getObject() != null && MMTameableEntries.tameableEntries.containsKey(((Entity)event.getObject()).getClass())) {
-            event.addCapability(CapabilityTameableEntity.capabilityID, new CapabilityProviderSerializable(CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY));
+         Entity entity = event.getObject();
+         if (entity != null) {
+            for (Class<? extends Entity> tameableClass : MMTameableEntries.tameableEntries.keySet()) {
+               if (tameableClass.isInstance(entity)) {
+                  event.addCapability(CapabilityTameableEntity.capabilityID, new CapabilityProviderSerializable<>(CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, null, new TameableEntityHandler()));
+                  return;
+               }
+            }
          }
       }
 
@@ -76,7 +83,7 @@ public class CapabilityTameableEntity {
             Mob entity = (Mob)event.getEntity();
             ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
             if (tameable != null && tameable.isTamed()) {
-               if (tameable.getFollowState() == 0 || tameable.getFollowState() == 0) {
+               if (tameable.getFollowState() == 0 || entity.isBaby()) {
                   resetEntityTargetAI(entity);
                } else {
                   updateEntityTargetAI(entity);
@@ -87,8 +94,8 @@ public class CapabilityTameableEntity {
                   entity.goalSelector.addGoal(3, new EntityAITameableFollowOwner(entity, 1.2, 8.0F, 2.0F));
                }
 
-               if (MMTameableEntries.tameableEntries.containsKey(entity)) {
-                  TameableEntityEntry entry = (TameableEntityEntry)MMTameableEntries.tameableEntries.get(entity);
+               if (MMTameableEntries.tameableEntries.containsKey(entity.getClass())) {
+                  TameableEntityEntry entry = MMTameableEntries.tameableEntries.get(entity.getClass());
                   entity.getAttribute(Attributes.MAX_HEALTH).setBaseValue((double)entry.getTamedHealth());
                }
             }
@@ -97,20 +104,20 @@ public class CapabilityTameableEntity {
 
       @SubscribeEvent
       public static void EntityUpdateEvent(LivingEvent.LivingTickEvent event) {
-         if (isTameableEntity(event.getEntity())) {
-            Mob entity = (Mob)event.getEntity();
-            ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
-            if (tameable != null && tameable.isTamed()) {
-               if (tameable.getFollowState() == 0) {
-                  entity.getNavigation().stop();
-                  entity.setSpeed(0.0F);
-                  entity.setTarget((LivingEntity)null);
-               }
+         if (!isTameableEntity(event.getEntity())) {
+            return;
+         }
 
-               if (entity.level().random.nextInt(200) == 0) {
-                  entity.level().addParticle(ParticleTypes.HEART, entity.getX() + (double)(entity.level().random.nextFloat() - entity.level().random.nextFloat()), entity.getY() + (double)entity.level().random.nextFloat() + (double)1.0F, entity.getZ() + (double)(entity.level().random.nextFloat() - entity.level().random.nextFloat()), (double)1.0F, (double)1.0F, (double)1.0F);
-               }
-            }
+         Mob entity = (Mob)event.getEntity();
+         ITameableEntity tameable = (ITameableEntity)EntityUtil.getCapability(event.getEntity(), CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, (Direction)null);
+         if (tameable == null || !tameable.isTamed()) {
+            return;
+         }
+
+         if (tameable.getFollowState() == 0) {
+            entity.getNavigation().stop();
+            entity.setSpeed(0.0F);
+            entity.setTarget((LivingEntity)null);
          }
       }
 
@@ -219,8 +226,13 @@ public class CapabilityTameableEntity {
          tameable.setOwner(owner.getUUID());
          tameable.setTamed(true);
          tameable.setFollowState(2);
+         entity.setTarget(null);
          MMMessageRegistry.getNetwork().send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(entity.getX(), entity.getY(), entity.getZ(), (double)255.0F, owner.level().dimension())), new MessageMMTameable(entity.getUUID().toString(), tameable.getOwnerId().toString(), tameable.getFollowState()));
-         updateEntityTargetAI(entity);
+         if (entity.isBaby()) {
+            resetEntityTargetAI(entity);
+         } else {
+            updateEntityTargetAI(entity);
+         }
          entity.goalSelector.addGoal(3, new EntityAITameableFollowOwner(entity, 1.2, 8.0F, 2.0F));
          playHealEffect(entity);
       }
@@ -259,7 +271,14 @@ public class CapabilityTameableEntity {
             double d0 = entity.level().random.nextGaussian() * 0.02;
             double d1 = entity.level().random.nextGaussian() * 0.02;
             double d2 = entity.level().random.nextGaussian() * 0.02;
-            entity.level().addParticle(ParticleTypes.HEART, entity.getX() + (double)(entity.level().random.nextFloat() * entity.getBbWidth() * 2.0F) - (double)entity.getBbWidth(), entity.getY() + (double)0.5F + (double)(entity.level().random.nextFloat() * entity.getBbHeight()), entity.getZ() + (double)(entity.level().random.nextFloat() * entity.getBbWidth() * 2.0F) - (double)entity.getBbWidth(), d0, d1, d2);
+            double x = entity.getX() + (double)(entity.level().random.nextFloat() * entity.getBbWidth() * 2.0F) - (double)entity.getBbWidth();
+            double y = entity.getY() + (double)0.5F + (double)(entity.level().random.nextFloat() * entity.getBbHeight());
+            double z = entity.getZ() + (double)(entity.level().random.nextFloat() * entity.getBbWidth() * 2.0F) - (double)entity.getBbWidth();
+            if (entity.level() instanceof ServerLevel serverLevel) {
+               serverLevel.sendParticles(ParticleTypes.HEART, x, y, z, 1, d0, d1, d2, 0.0D);
+            } else {
+               entity.level().addParticle(ParticleTypes.HEART, x, y, z, d0, d1, d2);
+            }
          }
       }
    }

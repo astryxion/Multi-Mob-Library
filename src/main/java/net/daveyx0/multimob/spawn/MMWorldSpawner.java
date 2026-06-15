@@ -4,7 +4,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import net.daveyx0.multimob.config.MMConfigSpawns;
@@ -83,15 +85,20 @@ public class MMWorldSpawner {
 
             int j4 = 0;
             BlockPos blockpos1 = worldServerIn.getSharedSpawnPos();
+            Map<MobCategory, Integer> mobCounts = new EnumMap<>(MobCategory.class);
+
+            for (MobCategory category : MobCategory.values()) {
+               mobCounts.put(category, 0);
+            }
+
+            for (Entity entity : worldServerIn.getAllEntities()) {
+               MobCategory category = entity.getType().getCategory();
+               mobCounts.merge(category, 1, Integer::sum);
+            }
 
             for(MobCategory enumcreaturetype : MobCategory.values()) {
                if ((!enumcreaturetype.isFriendly() || spawnPeacefulMobs) && (enumcreaturetype.isFriendly() || spawnHostileMobs) && (!enumcreaturetype.isPersistent() || spawnOnSetTickRate)) {
-                  int k4 = 0;
-                  for (Entity e : worldServerIn.getAllEntities()) {
-                     if (e.getType().getCategory() == enumcreaturetype) {
-                        k4++;
-                     }
-                  }
+                  int k4 = mobCounts.getOrDefault(enumcreaturetype, 0);
                   int l4 = (enumcreaturetype.getMaxInstancesPerChunk() + MMConfigSpawns.getSpawnLimitIncrease(enumcreaturetype)) * i / MOB_COUNT_DIV;
                   if (k4 <= l4) {
                      ArrayList<ChunkPos> shuffled = Lists.newArrayList(this.eligibleChunksForSpawning);

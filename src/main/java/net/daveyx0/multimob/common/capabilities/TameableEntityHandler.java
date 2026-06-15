@@ -4,10 +4,12 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import net.daveyx0.multimob.util.EntityUtil;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.util.INBTSerializable;
 
-public class TameableEntityHandler implements ITameableEntity {
+public class TameableEntityHandler implements ITameableEntity, INBTSerializable<CompoundTag> {
    protected UUID ownerID;
    protected boolean isTamed;
    protected int followState;
@@ -70,6 +72,40 @@ public class TameableEntityHandler implements ITameableEntity {
 
    public void setFollowState(int set) {
       this.followState = set;
+   }
+
+   @Override
+   public CompoundTag serializeNBT() {
+      CompoundTag compound = new CompoundTag();
+      UUID owner = this.getOwnerId();
+      if (owner == null) {
+         compound.putString("OwnerUUID", "");
+      } else {
+         compound.putString("OwnerUUID", owner.toString());
+      }
+
+      compound.putBoolean("Tamed", this.isTamed);
+      compound.putInt("FollowState", this.followState);
+      return compound;
+   }
+
+   @Override
+   public void deserializeNBT(CompoundTag compound) {
+      String ownerId = compound.getString("OwnerUUID");
+      if (!ownerId.isEmpty()) {
+         try {
+            this.setOwner(UUID.fromString(ownerId));
+            this.setTamed(true);
+         } catch (IllegalArgumentException ignored) {
+            this.setTamed(false);
+            this.ownerID = null;
+         }
+      } else {
+         this.ownerID = null;
+         this.isTamed = compound.getBoolean("Tamed");
+      }
+
+      this.followState = compound.getInt("FollowState");
    }
 
    private static class Factory implements Callable<ITameableEntity> {

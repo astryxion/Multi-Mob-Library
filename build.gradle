@@ -166,6 +166,8 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
+def devComposite = gradle.rootProject.name == 'primitivemobs'
+
 tasks.named('jar', Jar).configure {
     manifest {
         attributes([
@@ -179,8 +181,17 @@ tasks.named('jar', Jar).configure {
         ])
     }
 
-    // This is the preferred method to reobfuscate your jar file
-    finalizedBy 'reobfJar'
+    if (!devComposite) {
+        finalizedBy 'reobfJar'
+    }
+}
+
+afterEvaluate {
+    if (devComposite && tasks.findByName('reobfJar') != null) {
+        tasks.named('reobfJar').configure {
+            enabled = false
+        }
+    }
 }
 
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing:

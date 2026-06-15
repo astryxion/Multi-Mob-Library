@@ -41,15 +41,23 @@ public class CapabilityVariantEntity {
       @SubscribeEvent
       public static void AttachEntityCapabilitiesEvent(AttachCapabilitiesEvent<Entity> event) {
          if (event.getObject() != null && MMVariantEntries.variantEntries.containsKey(((Entity)event.getObject()).getClass())) {
-            event.addCapability(capabilityID, new CapabilityProviderSerializable(VARIANT_ENTITY_CAPABILITY));
+            event.addCapability(capabilityID, new CapabilityProviderSerializable<>(VARIANT_ENTITY_CAPABILITY, null, new VariantEntityHandler()));
          }
       }
 
       @SubscribeEvent
       public static void LivingEntityEvent(LivingEvent.LivingTickEvent event) {
-         if (hasVariant(event.getEntity()) && event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY).orElse(null) != null && ((IVariantEntity)event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY).orElse(null)).getVariant() != 0 && event.getEntity().tickCount % 10 == 0) {
-            IVariantEntity variant = event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY).orElse(null);
-            MMMessageRegistry.getNetwork().send(PacketDistributor.ALL.noArg(), new MessageMMVariant(event.getEntity().getUUID().toString(), variant.getVariant()));
+         // Variant visuals are synced when a player starts tracking the entity.
+      }
+
+      @SubscribeEvent
+      public static void PlayerStartsTrackingEvent(net.minecraftforge.event.entity.player.PlayerEvent.StartTracking event) {
+         if (!event.getEntity().level().isClientSide && hasVariant(event.getTarget())) {
+            event.getTarget().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY).ifPresent(variant -> {
+               if (variant.getVariant() != 0) {
+                  MMMessageRegistry.getNetwork().send(PacketDistributor.TRACKING_ENTITY.with(() -> event.getTarget()), new MessageMMVariant(event.getTarget().getUUID().toString(), variant.getVariant()));
+               }
+            });
          }
       }
 
