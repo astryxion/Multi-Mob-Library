@@ -23,6 +23,7 @@ public class EntityAIGrabItemFromFloor extends Goal {
    private final Set<ItemStack> temptItem;
    private boolean canGetScared;
    private int stealDelay = 0;
+   private int searchCooldown = 0;
 
    public EntityAIGrabItemFromFloor(PathfinderMob temptedEntityIn, double speedIn, Set<ItemStack> temptItemIn, boolean canGetScared) {
       this.temptedEntity = temptedEntityIn;
@@ -50,6 +51,12 @@ public class EntityAIGrabItemFromFloor extends Goal {
 
             return false;
          }
+
+         if (this.searchCooldown > 0) {
+            --this.searchCooldown;
+            return false;
+         }
+         this.searchCooldown = 10;
 
          List<ItemEntity> list = this.temptedEntity.level().getEntitiesOfClass(ItemEntity.class, this.temptedEntity.getBoundingBox().inflate(10.0D, 10.0D, 10.0D));
 
@@ -79,7 +86,16 @@ public class EntityAIGrabItemFromFloor extends Goal {
 
    @Override
    public boolean canContinueToUse() {
-      return this.canUse();
+      if (this.temptingItem == null || !this.temptingItem.isAlive() || this.temptingItem.getItem().isEmpty()) {
+         return false;
+      }
+      if (!this.temptedEntity.getMainHandItem().isEmpty()) {
+         return false;
+      }
+      if (this.temptedEntity.getLastHurtByMob() != null && this.canGetScared) {
+         return false;
+      }
+      return this.temptedEntity.distanceToSqr(this.temptingItem) <= 256.0D;
    }
 
    @Override

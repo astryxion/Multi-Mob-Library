@@ -3,6 +3,7 @@ package net.daveyx0.multimob.core;
 import java.io.File;
 import java.io.IOException;
 import net.daveyx0.multimob.config.MMConfig;
+import net.daveyx0.multimob.config.MMConfigSpawns;
 import net.daveyx0.multimob.config.MMFactoryGui;
 import net.daveyx0.multimob.entity.IMultiMob;
 import net.daveyx0.multimob.entity.IMultiMobLava;
@@ -32,10 +33,12 @@ public class MultiMob {
    public static MultiMob instance;
    private File directory;
 
-   public static final MobCategory MULTIMOB_MONSTER = MobCategory.create("MULTIMOB_MONSTER", "multimob_monster", 35, false, false, 128);
-   public static final MobCategory MULTIMOB_PASSIVE = MobCategory.create("MULTIMOB_PASSIVE", "multimob_passive", 10, false, false, 128);
-   public static final MobCategory MULTIMOB_WATER = MobCategory.create("MULTIMOB_WATER", "multimob_water", 10, false, false, 128);
-   public static final MobCategory MULTIMOB_LAVA = MobCategory.create("MULTIMOB_LAVA", "multimob_lava", 5, false, false, 128);
+   // Kept for API compatibility with older Multi Mob dependents, but Primitive Mobs
+   // now uses vanilla MobCategory values so NaturalSpawner does not run extra category passes.
+   public static final MobCategory MULTIMOB_MONSTER = MobCategory.create("MULTIMOB_MONSTER", "multimob_monster", 0, false, false, 128);
+   public static final MobCategory MULTIMOB_PASSIVE = MobCategory.create("MULTIMOB_PASSIVE", "multimob_passive", 0, true, true, 128);
+   public static final MobCategory MULTIMOB_WATER = MobCategory.create("MULTIMOB_WATER", "multimob_water", 0, true, false, 128);
+   public static final MobCategory MULTIMOB_LAVA = MobCategory.create("MULTIMOB_LAVA", "multimob_lava", 0, false, false, 128);
 
    public MultiMob() {
       instance = this;
@@ -71,14 +74,22 @@ public class MultiMob {
          MMSpawnRegistry.registerFillerSpawns();
 
          File subDirectory = new File(this.directory, "modInformation");
-         if (!subDirectory.exists()) {
-            subDirectory.mkdirs();
+         // Always remove the legacy allBlockStates dump — it is not used at runtime and
+         // balloons to tens of MB in modpacks, slowing exports and wasting disk.
+         if (FileUtil.cleanupOversizedReferenceFiles(subDirectory)) {
+            LOGGER.info("Removed oversized config/multimob/modInformation/allBlockStates.txt reference dump");
          }
 
-         try {
-            FileUtil.createTextFilesForModInfo(subDirectory);
-         } catch (IOException e) {
-            e.printStackTrace();
+         if (MMConfigSpawns.GENERATE_MOD_INFORMATION.get()) {
+            if (!subDirectory.exists()) {
+               subDirectory.mkdirs();
+            }
+
+            try {
+               FileUtil.createTextFilesForModInfo(subDirectory, MMConfigSpawns.GENERATE_ALL_BLOCKSTATES.get());
+            } catch (IOException e) {
+               e.printStackTrace();
+            }
          }
 
          MMConfig.postInit();

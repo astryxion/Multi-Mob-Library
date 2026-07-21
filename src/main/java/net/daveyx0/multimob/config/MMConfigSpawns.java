@@ -39,8 +39,22 @@ public class MMConfigSpawns {
    public static ForgeConfigSpec.IntValue OTHER_SPAWN_LIMIT;
    public static ForgeConfigSpec.ConfigValue<List<? extends Integer>> DIMENSION_WHITELIST;
    public static ForgeConfigSpec.ConfigValue<List<? extends String>> ENTITIES_TO_SPAWN;
+   public static ForgeConfigSpec.BooleanValue GENERATE_MOD_INFORMATION;
+   public static ForgeConfigSpec.BooleanValue GENERATE_ALL_BLOCKSTATES;
 
    public static void buildConfig(ForgeConfigSpec.Builder builder) {
+      builder.comment("Optional reference dumps under config/multimob/modInformation for pack authors. Off by default.")
+         .push("modInformation");
+
+      GENERATE_MOD_INFORMATION = builder
+         .comment("If true, writes registry id lists (entities, blocks, biomes, etc.) for spawn-config authoring. Does nothing at runtime.")
+         .define("generateModInformation", false);
+      GENERATE_ALL_BLOCKSTATES = builder
+         .comment("If true AND generateModInformation is true, also dumps every blockstate. Can be tens of MB with many mods — leave false.")
+         .define("generateAllBlockStates", false);
+
+      builder.pop();
+
       builder.comment("These options only apply when using the Additional Spawning system, which can also be enabled here.")
          .push("additionalSpawningOptions");
 

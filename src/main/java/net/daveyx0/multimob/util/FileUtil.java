@@ -13,7 +13,11 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.io.FileUtils;
 
 public class FileUtil {
-   public static void createTextFilesForModInfo(File directory) throws IOException {
+   /**
+    * Optional reference dumps for pack authors editing spawn configs.
+    * Disabled by default — allBlockStates alone can be tens of MB with modded packs.
+    */
+   public static void createTextFilesForModInfo(File directory, boolean includeAllBlockStates) throws IOException {
       listResourcesForRegistry(directory, "allEntities", ForgeRegistries.ENTITY_TYPES.getKeys());
       listResourcesForRegistry(directory, "allItems", ForgeRegistries.ITEMS.getKeys());
       listResourcesForRegistry(directory, "allBlocks", ForgeRegistries.BLOCKS.getKeys());
@@ -21,8 +25,19 @@ public class FileUtil {
       listResourcesForRegistry(directory, "allPotionTypes", ForgeRegistries.POTIONS.getKeys());
       listResourcesForRegistry(directory, "allEnchantments", ForgeRegistries.ENCHANTMENTS.getKeys());
       listBiomeResources(directory, "allBiomes", "allBiomeTypes");
-      listBlockStateResources(directory, "allBlockStates");
+      if (includeAllBlockStates) {
+         listBlockStateResources(directory, "allBlockStates");
+      }
       listStructureResources(directory, "allVanillaStructures");
+   }
+
+   /** Removes the known oversized reference dump from older Multi Mob versions. */
+   public static boolean cleanupOversizedReferenceFiles(File directory) {
+      if (directory == null || !directory.exists()) {
+         return false;
+      }
+      File blockStates = new File(directory, "allBlockStates.txt");
+      return blockStates.exists() && blockStates.isFile() && blockStates.delete();
    }
 
    public static void listResourcesForRegistry(File directory, String fileName, Set<ResourceLocation> registry) throws IOException {
@@ -36,7 +51,6 @@ public class FileUtil {
    }
 
    public static void listBlockStateResources(File directory, String fileName) throws IOException {
-      new ArrayList();
       List<String> arrayList = new ArrayList();
 
       for(Block loc : ForgeRegistries.BLOCKS) {
@@ -85,8 +99,9 @@ public class FileUtil {
 
    public static void createTextFile(File directory, String fileName, List<String> list) throws IOException {
       File textFile = new File(directory, fileName + ".txt");
+      // Do not rewrite every launch — these are optional authoring aids, not live config.
       if (textFile.exists()) {
-         textFile.delete();
+         return;
       }
 
       FileUtils.writeLines(textFile, list);

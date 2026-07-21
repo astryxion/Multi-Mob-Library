@@ -86,14 +86,14 @@ public class MMWorldSpawner {
             int j4 = 0;
             BlockPos blockpos1 = worldServerIn.getSharedSpawnPos();
             Map<MobCategory, Integer> mobCounts = new EnumMap<>(MobCategory.class);
-
             for (MobCategory category : MobCategory.values()) {
                mobCounts.put(category, 0);
             }
-
+            // Only count Mobs — skipping items/orbs/etc. cuts a large share of getAllEntities work.
             for (Entity entity : worldServerIn.getAllEntities()) {
-               MobCategory category = entity.getType().getCategory();
-               mobCounts.merge(category, 1, Integer::sum);
+               if (entity instanceof Mob) {
+                  mobCounts.merge(entity.getType().getCategory(), 1, Integer::sum);
+               }
             }
 
             for(MobCategory enumcreaturetype : MobCategory.values()) {

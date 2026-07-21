@@ -205,7 +205,8 @@ public class MMSpawnChecks {
    }
 
    public static boolean isLuckyEnoughToSpawn(Level worldIn, int chance) {
-      if (chance <= -1) {
+      // 0 and negative disable the rarity gate. nextInt(0) throws and has crashed config tweaks.
+      if (chance <= 0) {
          return true;
       } else {
          return worldIn.random.nextInt(chance) == 0;
