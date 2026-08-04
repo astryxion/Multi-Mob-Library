@@ -50,16 +50,21 @@ public class EntityUtil {
 
    @Nullable
    public static LivingEntity getLoadedEntityByUUID(UUID uuid, Level world) {
-      if (world instanceof ServerLevel) {
-         Entity entity = ((ServerLevel)world).getEntity(uuid);
-         if (entity instanceof LivingEntity) {
-            return (LivingEntity) entity;
-         }
+      if (uuid == null || world == null) {
          return null;
       }
-      for (Entity entity : world.getEntities((Entity)null, new AABB(Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE), e -> e.getUUID().equals(uuid))) {
-         if (entity instanceof LivingEntity) {
-            return (LivingEntity) entity;
+      if (world instanceof ServerLevel) {
+         Entity entity = ((ServerLevel)world).getEntity(uuid);
+         return entity instanceof LivingEntity living ? living : null;
+      }
+
+      // Client / non-server: never scan a world-sized AABB (previous code used
+      // Double.MIN/MAX and could hitch every owner lookup). Search near players only.
+      for (Player player : world.players()) {
+         for (Entity entity : world.getEntities(player, player.getBoundingBox().inflate(128.0D), e -> uuid.equals(e.getUUID()))) {
+            if (entity instanceof LivingEntity living) {
+               return living;
+            }
          }
       }
       return null;

@@ -37,7 +37,7 @@ public class LayerVariantOverlay<T extends LivingEntity, M extends EntityModel<T
                RenderSystem.depthMask(true);
                ResourceLocation texture = ResourceLocation.fromNamespaceAndPath("multimob", "textures/entity/variants/" + entry.getVariantName() + ".png");
                VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(texture));
-               this.getParentModel().renderToBuffer(poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY);
+               this.getParentModel().renderToBuffer(poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
                RenderSystem.depthMask(false);
                poseStack.popPose();
             }

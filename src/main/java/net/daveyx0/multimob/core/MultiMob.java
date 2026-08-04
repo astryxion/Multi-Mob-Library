@@ -3,24 +3,20 @@ package net.daveyx0.multimob.core;
 import java.io.File;
 import java.io.IOException;
 import net.daveyx0.multimob.config.MMConfig;
-import net.daveyx0.multimob.config.MMFactoryGui;
+import net.daveyx0.multimob.config.MMConfigSpawns;
 import net.daveyx0.multimob.message.MMMessageRegistry;
 import net.daveyx0.multimob.spawn.MMSpawnRegistry;
 import net.daveyx0.multimob.spawn.MMSpawnerEventHandler;
 import net.daveyx0.multimob.util.FileUtil;
 import net.minecraft.world.entity.MobCategory;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModLoadingContext;
-import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.asm.enumextension.EnumProxy;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.NeoForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,25 +26,18 @@ public class MultiMob {
    public static MultiMob instance;
    private File directory;
 
-   public static class MobCategoryEnumParams {
-      public static final EnumProxy<MobCategory> MULTIMOB_MONSTER_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_monster", 35, false, false, 128);
-      public static final EnumProxy<MobCategory> MULTIMOB_PASSIVE_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_passive", 10, false, false, 128);
-      public static final EnumProxy<MobCategory> MULTIMOB_WATER_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_water", 10, false, false, 128);
-      public static final EnumProxy<MobCategory> MULTIMOB_LAVA_PROXY = new EnumProxy<>(MobCategory.class, "multimob:multimob_lava", 5, false, false, 128);
-   }
+   // Custom MobCategory.create() is an enum-extension concern on NeoForge 1.21.
+   // Alias to vanilla categories for API compatibility; custom spawning uses MMWorldSpawner.
+   public static final MobCategory MULTIMOB_MONSTER = MobCategory.MONSTER;
+   public static final MobCategory MULTIMOB_PASSIVE = MobCategory.CREATURE;
+   public static final MobCategory MULTIMOB_WATER = MobCategory.WATER_CREATURE;
+   public static final MobCategory MULTIMOB_LAVA = MobCategory.MONSTER;
 
-   public static final MobCategory MULTIMOB_MONSTER = MobCategoryEnumParams.MULTIMOB_MONSTER_PROXY.getValue();
-   public static final MobCategory MULTIMOB_PASSIVE = MobCategoryEnumParams.MULTIMOB_PASSIVE_PROXY.getValue();
-   public static final MobCategory MULTIMOB_WATER = MobCategoryEnumParams.MULTIMOB_WATER_PROXY.getValue();
-   public static final MobCategory MULTIMOB_LAVA = MobCategoryEnumParams.MULTIMOB_LAVA_PROXY.getValue();
-
-   public MultiMob() {
+   public MultiMob(IEventBus modEventBus, ModContainer modContainer) {
       instance = this;
-      ModLoadingContext context = ModLoadingContext.get();
-      IEventBus modEventBus = context.getActiveContainer().getEventBus();
 
-      MMCapabilities.registerAttachments(modEventBus);
       MMEntityRegistry.init(modEventBus);
+      MMAttachments.init(modEventBus);
 
       modEventBus.addListener(this::commonSetup);
       modEventBus.addListener(this::clientSetup);
@@ -56,18 +45,13 @@ public class MultiMob {
       modEventBus.addListener(MMConfig::onConfigChanged);
       modEventBus.addListener(MMMessageRegistry::registerPayloads);
 
-      context.getActiveContainer().registerConfig(ModConfig.Type.COMMON, MMConfig.CONFIG_SPEC, "multimob/multimob_spawns.toml");
-      if (FMLEnvironment.dist == Dist.CLIENT) {
-         context.getActiveContainer().registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class, MMFactoryGui.getFactory());
-      }
+      modContainer.registerConfig(ModConfig.Type.COMMON, MMConfig.CONFIG_SPEC, "multimob/multimob_spawns.toml");
 
       NeoForge.EVENT_BUS.register(new MMSpawnerEventHandler());
    }
 
    private void commonSetup(final FMLCommonSetupEvent event) {
       event.enqueueWork(() -> {
-         MMMessageRegistry.preInit();
-
          this.directory = new File(FMLPaths.CONFIGDIR.get().toFile(), "multimob");
          if (!this.directory.exists()) {
             this.directory.mkdirs();
@@ -80,14 +64,22 @@ public class MultiMob {
          MMSpawnRegistry.registerFillerSpawns();
 
          File subDirectory = new File(this.directory, "modInformation");
-         if (!subDirectory.exists()) {
-            subDirectory.mkdirs();
+         // Always remove the legacy allBlockStates dump — it is not used at runtime and
+         // balloons to tens of MB in modpacks, slowing exports and wasting disk.
+         if (FileUtil.cleanupOversizedReferenceFiles(subDirectory)) {
+            LOGGER.info("Removed oversized config/multimob/modInformation/allBlockStates.txt reference dump");
          }
 
-         try {
-            FileUtil.createTextFilesForModInfo(subDirectory);
-         } catch (IOException e) {
-            e.printStackTrace();
+         if (MMConfigSpawns.GENERATE_MOD_INFORMATION.get()) {
+            if (!subDirectory.exists()) {
+               subDirectory.mkdirs();
+            }
+
+            try {
+               FileUtil.createTextFilesForModInfo(subDirectory, MMConfigSpawns.GENERATE_ALL_BLOCKSTATES.get());
+            } catch (IOException e) {
+               e.printStackTrace();
+            }
          }
 
          MMConfig.postInit();

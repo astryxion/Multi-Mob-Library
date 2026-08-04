@@ -1,25 +1,16 @@
 package net.daveyx0.multimob.spawn;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import net.daveyx0.multimob.config.MMConfig;
 import net.daveyx0.multimob.config.MMConfigSpawns;
 import net.daveyx0.multimob.core.MultiMob;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.MobSpawnSettings;
-import net.daveyx0.multimob.util.FileUtil;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.tags.TagKey;
-import net.minecraft.core.registries.BuiltInRegistries;
 
 public class MMSpawnRegistry {
-   public static final List<MMSpawnEntry> SPAWNS = new ArrayList();
+   public static final List<MMSpawnEntry> SPAWNS = new ArrayList<>();
 
    public static void registerFillerSpawns() {
       registerSpawnEntry((new MMConfigSpawnEntry("_Filler_MMMonster", "multimob:dummy", 100, false)).setupBaseMobSpawnEntry(false).setCreatureType("MULTIMOBMONSTER"));
@@ -35,10 +26,10 @@ public class MMSpawnRegistry {
    public static void loadSpawns() {
       SPAWNS.clear();
 
-      for(MMConfigSpawnEntry configEntry : MMConfig.CONFIGSPAWNS) {
+      for (MMConfigSpawnEntry configEntry : MMConfig.CONFIGSPAWNS) {
          MMSpawnEntry entry = getSpawnEntryFromConfig(configEntry);
          if (entry != null && entry.getEntityType() != null) {
-            SPAWNS.add(getSpawnEntryFromConfig(configEntry));
+            SPAWNS.add(entry);
          }
       }
 
@@ -50,7 +41,7 @@ public class MMSpawnRegistry {
    }
 
    public static MMSpawnEntry getSpawnEntryFromEntityType(EntityType<?> entityType) {
-      for(MMSpawnEntry entry : SPAWNS) {
+      for (MMSpawnEntry entry : SPAWNS) {
          if (entry.getEntityType().equals(entityType)) {
             return entry;
          }
@@ -60,7 +51,7 @@ public class MMSpawnRegistry {
    }
 
    public static MMSpawnEntry getSpawnEntryFromConfig(MMConfigSpawnEntry configEntry) {
-      EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(configEntry.entityName));
+      EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getOptional(ResourceLocation.parse(configEntry.entityName)).orElse(null);
       if (entityType != null) {
          return new MMSpawnEntry(configEntry.getEntryName(), entityType, configEntry);
       } else {
@@ -70,44 +61,14 @@ public class MMSpawnRegistry {
    }
 
    public static void registerRegularSpawns() {
-      for(MMSpawnEntry entry : SPAWNS) {
+      for (MMSpawnEntry entry : SPAWNS) {
          addRegularSpawn(entry);
       }
-
    }
 
+   /**
+    * Vanilla biome spawn lists are immutable; custom spawning is handled by {@link MMWorldSpawner}.
+    */
    public static void addRegularSpawn(MMSpawnEntry entry) {
-      if (entry.getSpawnLimit() != 0 && entry.getSpawnWeight() != 0) {
-         HolderLookup.RegistryLookup<Biome> biomeRegistry = FileUtil.getBiomeLookup();
-         if ((entry.getBiomes() == null || entry.getBiomes().isEmpty()) && (entry.getBiomeTypes() == null || entry.getBiomeTypes().isEmpty())) {
-            for(Biome biome : biomeRegistry.listElements().map(Holder::value).toList()) {
-               // Biome spawn data is now immutable in 1.20.1; spawn additions are handled via BiomeModifier or events
-            }
-         } else {
-            Set<Biome> biomes = new HashSet();
-            if (entry.getBiomes() != null && !entry.getBiomes().isEmpty()) {
-               for(Biome biome : entry.getBiomes()) {
-                  biomes.add(biome);
-               }
-            }
-
-            if (entry.getBiomeTypes() != null && !entry.getBiomeTypes().isEmpty()) {
-               for(Holder.Reference<Biome> biomeHolder : biomeRegistry.listElements().toList()) {
-                  Biome biome = biomeHolder.value();
-                  boolean typeCheck = true;
-                  for(TagKey<Biome> biomeType : entry.getBiomeTypes()) {
-                     if (!biomeHolder.is(biomeType)) {
-                        typeCheck = false;
-                     }
-                  }
-
-                  if (typeCheck) {
-                     biomes.add(biome);
-                  }
-               }
-            }
-         }
-      }
-
    }
 }

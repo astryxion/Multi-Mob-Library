@@ -67,7 +67,7 @@ public class ColorUtil {
          } else if (sprite != null) {
             String textureName = sprite.contents().name().toString();
             String modelName = textureName.replaceAll(":", ":models/");
-            ModelResourceLocation model = new ModelResourceLocation(ResourceLocation.parse(modelName), "");
+            ModelResourceLocation model = ModelResourceLocation.standalone(ResourceLocation.parse(modelName));
             String topTextureName = "";
             if (model != null) {
                BakedModel bakedModel = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(state);

@@ -15,6 +15,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.NaturalSpawner;
@@ -206,15 +207,21 @@ public class MMSpawnChecks {
    }
 
    public static boolean isLuckyEnoughToSpawn(Level worldIn, int chance) {
-      if (chance <= -1) {
+      // 0 and negative disable the rarity gate. nextInt(0) throws and has crashed config tweaks.
+      if (chance <= 0) {
          return true;
       } else {
          return worldIn.random.nextInt(chance) == 0;
       }
    }
 
-   public static boolean isBiomeSuitable(Level worldIn, BlockPos pos, List<Biome> biomes) {
-      return biomes != null && !biomes.isEmpty() ? biomes.contains(worldIn.getBiome(pos).value()) : true;
+   public static boolean isBiomeSuitable(Level worldIn, BlockPos pos, List<ResourceLocation> biomes) {
+      if (biomes == null || biomes.isEmpty()) {
+         return true;
+      }
+      return worldIn.getBiome(pos).unwrapKey()
+         .map(key -> biomes.contains(key.location()))
+         .orElse(false);
    }
 
    public static boolean isBiomeTypeSuitable(Level worldIn, BlockPos pos, List<TagKey<Biome>> types) {

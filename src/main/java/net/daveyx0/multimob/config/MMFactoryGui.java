@@ -1,13 +1,14 @@
 package net.daveyx0.multimob.config;
 
+import java.util.function.BiFunction;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.minecraft.client.gui.screens.Screen;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 @OnlyIn(Dist.CLIENT)
 public class MMFactoryGui {
-   public static IConfigScreenFactory getFactory() {
-      return (container, parentScreen) -> new MMGuiConfig(parentScreen);
+   public static BiFunction<Minecraft, Screen, Screen> getFactory() {
+      return (mc, parentScreen) -> new MMGuiConfig(parentScreen);
    }
 }

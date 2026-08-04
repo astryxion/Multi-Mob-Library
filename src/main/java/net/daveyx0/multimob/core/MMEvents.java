@@ -1,8 +1,7 @@
 package net.daveyx0.multimob.core;
 
-import net.neoforged.fml.common.Mod;
-
+/** Placeholder for future multimob game-bus listeners. */
 public class MMEvents {
-   public static class EntityEventHandler {
-   }
+	public static class EntityEventHandler {
+	}
 }

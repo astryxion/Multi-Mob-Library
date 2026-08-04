@@ -23,6 +23,7 @@ public class EntityAIStealFromPlayer extends Goal {
    private final Set<ItemStack> temptItem;
    private boolean canGetScared;
    private int stealDelay = 0;
+   private int searchCooldown = 0;
 
    public EntityAIStealFromPlayer(PathfinderMob temptedEntityIn, double speedIn, Set<ItemStack> temptItemIn, boolean canGetScared) {
       this.temptedEntity = temptedEntityIn;
@@ -42,7 +43,6 @@ public class EntityAIStealFromPlayer extends Goal {
       } else if (!this.temptedEntity.getMainHandItem().isEmpty()) {
          return false;
       } else {
-         this.temptingPlayer = this.temptedEntity.level().getNearestPlayer(this.temptedEntity, 10.0D);
          if (this.stealDelay > 0) {
             --this.stealDelay;
             if (this.stealDelay == 0) {
@@ -50,18 +50,25 @@ public class EntityAIStealFromPlayer extends Goal {
             }
 
             return false;
-         } else {
-            if (this.temptingPlayer != null) {
-               for(int i = 0; i < this.temptingPlayer.getInventory().getContainerSize(); ++i) {
-                  ItemStack item = this.temptingPlayer.getInventory().getItem(i);
-                  if (!item.isEmpty() && this.isTempting(item)) {
-                     return true;
-                  }
-               }
-            }
+         }
 
+         if (this.searchCooldown > 0) {
+            --this.searchCooldown;
             return false;
          }
+         this.searchCooldown = 10;
+
+         this.temptingPlayer = this.temptedEntity.level().getNearestPlayer(this.temptedEntity, 10.0D);
+         if (this.temptingPlayer != null) {
+            for(int i = 0; i < this.temptingPlayer.getInventory().getContainerSize(); ++i) {
+               ItemStack item = this.temptingPlayer.getInventory().getItem(i);
+               if (!item.isEmpty() && this.isTempting(item)) {
+                  return true;
+               }
+            }
+         }
+
+         return false;
       }
    }
 
@@ -79,7 +86,16 @@ public class EntityAIStealFromPlayer extends Goal {
 
    @Override
    public boolean canContinueToUse() {
-      return this.canUse();
+      if (this.temptingPlayer == null || !this.temptingPlayer.isAlive() || this.temptingPlayer.isSpectator()) {
+         return false;
+      }
+      if (!this.temptedEntity.getMainHandItem().isEmpty()) {
+         return false;
+      }
+      if (this.temptedEntity.getLastHurtByMob() != null && this.canGetScared) {
+         return false;
+      }
+      return this.temptedEntity.distanceToSqr(this.temptingPlayer) <= 256.0D;
    }
 
    @Override

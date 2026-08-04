@@ -4,7 +4,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import net.daveyx0.multimob.config.MMConfigSpawns;
@@ -19,6 +21,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -84,15 +87,20 @@ public class MMWorldSpawner {
 
             int j4 = 0;
             BlockPos blockpos1 = worldServerIn.getSharedSpawnPos();
+            Map<MobCategory, Integer> mobCounts = new EnumMap<>(MobCategory.class);
+            for (MobCategory category : MobCategory.values()) {
+               mobCounts.put(category, 0);
+            }
+            // Only count Mobs — skipping items/orbs/etc. cuts a large share of getAllEntities work.
+            for (Entity entity : worldServerIn.getAllEntities()) {
+               if (entity instanceof Mob) {
+                  mobCounts.merge(entity.getType().getCategory(), 1, Integer::sum);
+               }
+            }
 
             for(MobCategory enumcreaturetype : MobCategory.values()) {
                if ((!enumcreaturetype.isFriendly() || spawnPeacefulMobs) && (enumcreaturetype.isFriendly() || spawnHostileMobs) && (!enumcreaturetype.isPersistent() || spawnOnSetTickRate)) {
-                  int k4 = 0;
-                  for (Entity e : worldServerIn.getAllEntities()) {
-                     if (e.getType().getCategory() == enumcreaturetype) {
-                        k4++;
-                     }
-                  }
+                  int k4 = mobCounts.getOrDefault(enumcreaturetype, 0);
                   int l4 = (enumcreaturetype.getMaxInstancesPerChunk() + MMConfigSpawns.getSpawnLimitIncrease(enumcreaturetype)) * i / MOB_COUNT_DIV;
                   if (k4 <= l4) {
                      ArrayList<ChunkPos> shuffled = Lists.newArrayList(this.eligibleChunksForSpawning);
@@ -152,7 +160,7 @@ public class MMWorldSpawner {
                                           entityliving.moveTo((double)f, (double)i3, (double)f1, worldServerIn.random.nextFloat() * 360.0F, 0.0F);
                                           boolean canSpawn = EventHooks.checkSpawnPosition(entityliving, worldServerIn, MobSpawnType.NATURAL);
                                           if (canSpawn) {
-                                             ientitylivingdata = EventHooks.finalizeMobSpawn(entityliving, worldServerIn, worldServerIn.getCurrentDifficultyAt(new BlockPos(entityliving.blockPosition())), MobSpawnType.NATURAL, ientitylivingdata);
+                                             ientitylivingdata = EventHooks.finalizeMobSpawn(entityliving, worldServerIn, worldServerIn.getCurrentDifficultyAt(entityliving.blockPosition()), MobSpawnType.NATURAL, ientitylivingdata);
 
                                              if (entityliving.checkSpawnObstruction(worldServerIn)) {
                                                 ++j2;
@@ -268,7 +276,7 @@ public class MMWorldSpawner {
 
                      entityliving.moveTo((double)((float)j + 0.5F), (double)blockpos.getY(), (double)((float)k + 0.5F), randomIn.nextFloat() * 360.0F, 0.0F);
                      worldIn.addFreshEntity(entityliving);
-                     ientitylivingdata = entityliving.finalizeSpawn((ServerLevel)worldIn, worldIn.getCurrentDifficultyAt(new BlockPos(entityliving.blockPosition())), MobSpawnType.NATURAL, ientitylivingdata);
+                     ientitylivingdata = entityliving.finalizeSpawn((ServerLevel)worldIn, worldIn.getCurrentDifficultyAt(entityliving.blockPosition()), MobSpawnType.NATURAL, ientitylivingdata);
                      flag = true;
                   }
 

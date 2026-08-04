@@ -3,8 +3,6 @@ package net.daveyx0.multimob.core;
 import java.util.HashMap;
 import net.daveyx0.multimob.entity.EntityDummy;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;

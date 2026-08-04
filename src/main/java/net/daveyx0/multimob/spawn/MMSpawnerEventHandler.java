@@ -6,14 +6,12 @@ import net.daveyx0.multimob.common.capabilities.CapabilityVariantEntity;
 import net.daveyx0.multimob.common.capabilities.IVariantEntity;
 import net.daveyx0.multimob.config.MMConfigSpawns;
 import net.daveyx0.multimob.entity.EntityDummy;
-import net.daveyx0.multimob.util.EntityUtil;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.storage.LevelData;
-import net.neoforged.neoforge.event.entity.living.SpawnClusterSizeEvent;
-import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 public class MMSpawnerEventHandler {
@@ -21,8 +19,7 @@ public class MMSpawnerEventHandler {
 
    @SubscribeEvent
    public void onWorldTickEvent(LevelTickEvent.Pre event) {
-      if (event.getLevel() instanceof ServerLevel) {
-         ServerLevel worldServer = (ServerLevel)event.getLevel();
+      if (event.getLevel() instanceof ServerLevel worldServer) {
          if (MMConfigSpawns.getUseAdditionalSpawning()) {
             if (this.worldSpawner == null) {
                this.worldSpawner = new MMWorldSpawner();
@@ -35,62 +32,88 @@ public class MMSpawnerEventHandler {
          } else {
             this.worldSpawner = null;
          }
-
       }
    }
 
    @SubscribeEvent
-   public void onCheckSpawn(MobSpawnEvent.PositionCheck event) {
-      if (event.getSpawner() == null && event.getResult() != MobSpawnEvent.PositionCheck.Result.FAIL) {
+   public void onCheckSpawn(FinalizeSpawnEvent event) {
+      if (event.getSpawner() == null && !event.isSpawnCancelled()) {
          if (event.getEntity() instanceof EntityDummy) {
-            event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
+            event.setSpawnCancelled(true);
+            return;
          }
 
-         List<MMSpawnEntry> spawnEntries = new ArrayList();
+         List<MMSpawnEntry> spawnEntries = new ArrayList<>();
 
-         for(MMSpawnEntry entry : MMSpawnRegistry.getSpawnEntries()) {
+         for (MMSpawnEntry entry : MMSpawnRegistry.getSpawnEntries()) {
             if (entry.getEntityType().equals(event.getEntity().getType())) {
                spawnEntries.add(entry);
             }
          }
 
-         if (spawnEntries != null && !spawnEntries.isEmpty()) {
-            MMSpawnEntry entry = (MMSpawnEntry)spawnEntries.get(event.getLevel().getRandom().nextInt(spawnEntries.size()));
-            if (entry != null) {
-               if (entry.getVariantID() != 0 && CapabilityVariantEntity.EventHandler.hasVariant(event.getEntity())) {
-                  IVariantEntity variant = event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY);
-                  if (variant != null) {
-                     variant.setVariant(entry.getVariantID());
-                  }
-               }
-
-               if (event.getLevel() instanceof ServerLevel && MMSpawnChecks.performSpawnChecks((ServerLevel)event.getLevel(), new BlockPos((int)event.getX(), (int)event.getY(), (int)event.getZ()), entry)) {
-                  if (!entry.getOverrideCanGetSpawnHere()) {
-                     event.setResult(MobSpawnEvent.PositionCheck.Result.DEFAULT);
-                     return;
-                  }
-
-                  if (MMSpawnChecks.canEntitySpawnHere(event.getEntity(), entry)) {
-                     event.setResult(MobSpawnEvent.PositionCheck.Result.SUCCEED);
-                  } else {
-                     event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
-                  }
-               } else {
-                  event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
-               }
+         if (!spawnEntries.isEmpty()) {
+            BlockPos spawnPos = BlockPos.containing(event.getX(), event.getY(), event.getZ());
+            MMSpawnEntry entry = null;
+            if (event.getLevel() instanceof ServerLevel serverLevel && event.getEntity() instanceof Mob) {
+               entry = selectSpawnEntry(serverLevel, spawnEntries, event.getEntity(), spawnPos);
             }
 
+            if (entry == null) {
+               event.setSpawnCancelled(true);
+            } else {
+               final MMSpawnEntry selectedEntry = entry;
+               if (selectedEntry.getVariantID() != 0 && CapabilityVariantEntity.EventHandler.hasVariant(event.getEntity())) {
+                  IVariantEntity variant = event.getEntity().getCapability(CapabilityVariantEntity.VARIANT_ENTITY_CAPABILITY);
+                  if (variant != null) {
+                     variant.setVariant(selectedEntry.getVariantID());
+                  }
+               }
+
+               if (selectedEntry.getOverrideCanGetSpawnHere()) {
+                  if (!MMSpawnChecks.canEntitySpawnHere(event.getEntity(), selectedEntry)) {
+                     event.setSpawnCancelled(true);
+                  }
+               }
+            }
          }
       }
    }
 
-   @SubscribeEvent
-   public void onLivingPackSizeEvent(SpawnClusterSizeEvent event) {
-      MMSpawnEntry entry = MMSpawnRegistry.getSpawnEntryFromEntityType(event.getEntity().getType());
-      if (entry != null && entry.getGroupSizeRange() != null && entry.getGroupSizeRange()[1] > 0) {
-         event.setSize(entry.getGroupSizeRange()[1]);
+   private static MMSpawnEntry selectSpawnEntry(ServerLevel level, List<MMSpawnEntry> spawnEntries, Mob mob, BlockPos pos) {
+      List<MMSpawnEntry> passing = new ArrayList<>();
+
+      for (MMSpawnEntry candidate : spawnEntries) {
+         if (!MMSpawnChecks.performSpawnChecks(level, pos, candidate)) {
+            continue;
+         }
+
+         if (!candidate.getOverrideCanGetSpawnHere() || MMSpawnChecks.canEntitySpawnHere(mob, candidate)) {
+            passing.add(candidate);
+         }
       }
 
+      if (passing.isEmpty()) {
+         return null;
+      }
+
+      if (passing.size() == 1) {
+         return passing.get(0);
+      }
+
+      int totalWeight = 0;
+      for (MMSpawnEntry candidate : passing) {
+         totalWeight += Math.max(1, candidate.getSpawnWeight());
+      }
+
+      int roll = level.getRandom().nextInt(totalWeight);
+      for (MMSpawnEntry candidate : passing) {
+         roll -= Math.max(1, candidate.getSpawnWeight());
+         if (roll < 0) {
+            return candidate;
+         }
+      }
+
+      return passing.get(passing.size() - 1);
    }
 
    public MMWorldSpawner getWorldSpawner() {

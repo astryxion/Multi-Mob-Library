@@ -5,6 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.TagKey;
@@ -23,7 +24,7 @@ public class MMSpawnEntry {
    private List<EntityType<?>> entitiesNear;
    private List<BlockState> blocksNear;
    private List<BlockState> spawnBlocks;
-   private List<Biome> biomes;
+   private List<ResourceLocation> biomes;
    private List<TagKey<Biome>> biomeTypes;
    private List<String> structures;
    private List<Integer> dimensions;
@@ -133,7 +134,7 @@ public class MMSpawnEntry {
       return this.blocksNear;
    }
 
-   public List<Biome> getBiomes() {
+   public List<ResourceLocation> getBiomes() {
       return this.biomes;
    }
 

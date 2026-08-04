@@ -7,7 +7,12 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 
+/**
+ * Soft spacing goal: nudges the mob away from its target when too close.
+ * Does not claim MOVE (so casting / other goals can run), and does not path-flee.
+ */
 public class EntityAIBackOffFromEntity extends Goal {
    PathfinderMob creature;
    LivingEntity target;
@@ -45,14 +50,16 @@ public class EntityAIBackOffFromEntity extends Goal {
    @Override
    public void tick() {
       if (this.target != null) {
-         double motionX = this.target.getX() - this.creature.getX();
-         double motionZ = this.target.getZ() - this.creature.getZ();
-         double d = -0.7D / (motionX * motionX + motionZ * motionZ + 0.0625D) * 1.5D;
-         motionX *= d;
-         motionZ *= d;
-         this.creature.setDeltaMovement(motionX, this.creature.getDeltaMovement().y, motionZ);
-         if (this.creature.horizontalCollision) {
-            this.creature.getJumpControl().jump();
+         this.creature.getLookControl().setLookAt(this.target, 30.0F, 30.0F);
+
+         // Soft shove away from target (original Multi Mob behavior) — no pathfinding kite
+         double dx = this.creature.getX() - this.target.getX();
+         double dz = this.creature.getZ() - this.target.getZ();
+         double dist = Math.sqrt(dx * dx + dz * dz);
+         if (dist > 1.0E-4D) {
+            Vec3 motion = this.creature.getDeltaMovement();
+            double push = 0.15D;
+            this.creature.setDeltaMovement(motion.x + (dx / dist) * push, motion.y, motion.z + (dz / dist) * push);
          }
 
          if (this.defensiveAttack && this.creature instanceof Creeper && !this.creature.level().isClientSide && this.creature.getHealth() < this.creature.getMaxHealth() / 2.0F && this.creature.getRandom().nextInt(20) == 0) {
@@ -66,6 +73,5 @@ public class EntityAIBackOffFromEntity extends Goal {
             }
          }
       }
-
    }
 }

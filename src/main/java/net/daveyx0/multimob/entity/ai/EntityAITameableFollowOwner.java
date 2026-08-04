@@ -47,7 +47,7 @@ public class EntityAITameableFollowOwner extends Goal {
    public boolean canUse() {
       if (this.tameable != null) {
          ITameableEntity tameableEntity = EntityUtil.getCapability(this.tameable, CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, null);
-         if (tameableEntity == null) {
+         if (tameableEntity == null || !tameableEntity.isTamed() || tameableEntity.getFollowState() != 2) {
             return false;
          }
          LivingEntity entitylivingbase = tameableEntity.getOwner(this.tameable);
@@ -68,6 +68,11 @@ public class EntityAITameableFollowOwner extends Goal {
 
    @Override
    public boolean canContinueToUse() {
+      ITameableEntity tameableEntity = EntityUtil.getCapability(this.tameable, CapabilityTameableEntity.TAMEABLE_ENTITY_CAPABILITY, null);
+      if (tameableEntity == null || !tameableEntity.isTamed() || tameableEntity.getFollowState() != 2) {
+         return false;
+      }
+
       return !this.petPathfinder.isDone() && this.tameable.distanceToSqr(this.owner) > (double)(this.maxDist * this.maxDist);
    }
 

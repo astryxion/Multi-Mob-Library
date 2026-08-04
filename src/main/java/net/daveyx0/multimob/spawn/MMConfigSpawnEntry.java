@@ -3,22 +3,19 @@ package net.daveyx0.multimob.spawn;
 import java.util.ArrayList;
 import java.util.List;
 import net.daveyx0.multimob.core.MultiMob;
-import net.daveyx0.multimob.util.FileUtil;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 public class MMConfigSpawnEntry {
    private static String category1 = "spawnLimit";
@@ -205,7 +202,7 @@ public class MMConfigSpawnEntry {
          List<EntityType<?>> entryList = new ArrayList();
 
          for(String entry : this.entitiesNear) {
-            EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(entry));
+            EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getOptional(ResourceLocation.parse(entry)).orElse(null);
             if (entityType != null) {
                entryList.add(entityType);
             }
@@ -217,15 +214,14 @@ public class MMConfigSpawnEntry {
       }
    }
 
-   public List<Biome> getBiomeList() {
+   public List<ResourceLocation> getBiomeList() {
       if (this.biomes != null && !this.biomes[0].equals("")) {
-         List<Biome> entryList = new ArrayList();
+         List<ResourceLocation> entryList = new ArrayList<>();
 
-         for(String entry : this.biomes) {
-            HolderLookup.RegistryLookup<Biome> biomeRegistry = FileUtil.getBiomeLookup();
-            Biome biomeEntry = biomeRegistry.get(ResourceKey.create(Registries.BIOME, ResourceLocation.parse(entry))).map(Holder.Reference::value).orElse(null);
-            if (biomeEntry != null) {
-               entryList.add(biomeEntry);
+         for (String entry : this.biomes) {
+            ResourceLocation biomeId = ResourceLocation.tryParse(entry);
+            if (biomeId != null) {
+               entryList.add(biomeId);
             }
          }
 
@@ -272,7 +268,7 @@ public class MMConfigSpawnEntry {
       List<BlockState> entryList = new ArrayList();
 
       for(String entry : array) {
-         Block blockEntry = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(entry));
+         Block blockEntry = BuiltInRegistries.BLOCK.getOptional(ResourceLocation.parse(entry)).orElse(null);
          if (blockEntry != null) {
             entryList.add(blockEntry.defaultBlockState());
          } else {

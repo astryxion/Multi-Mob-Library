@@ -1,12 +1,10 @@
 package net.daveyx0.multimob.common.capabilities;
 
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import net.daveyx0.multimob.util.EntityUtil;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.common.util.INBTSerializable;
@@ -78,29 +76,35 @@ public class TameableEntityHandler implements ITameableEntity, INBTSerializable<
 
    @Override
    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
-      CompoundTag tag = new CompoundTag();
-      if (this.ownerID != null) {
-         tag.putUUID("Owner", this.ownerID);
+      CompoundTag compound = new CompoundTag();
+      UUID owner = this.getOwnerId();
+      if (owner == null) {
+         compound.putString("OwnerUUID", "");
+      } else {
+         compound.putString("OwnerUUID", owner.toString());
       }
-      tag.putBoolean("Tamed", this.isTamed);
-      tag.putInt("FollowState", this.followState);
-      return tag;
+
+      compound.putBoolean("Tamed", this.isTamed);
+      compound.putInt("FollowState", this.followState);
+      return compound;
    }
 
    @Override
-   public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
-      if (nbt.hasUUID("Owner")) {
-         this.ownerID = nbt.getUUID("Owner");
+   public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compound) {
+      String ownerId = compound.getString("OwnerUUID");
+      if (!ownerId.isEmpty()) {
+         try {
+            this.setOwner(UUID.fromString(ownerId));
+            this.setTamed(true);
+         } catch (IllegalArgumentException ignored) {
+            this.setTamed(false);
+            this.ownerID = null;
+         }
       } else {
          this.ownerID = null;
+         this.isTamed = compound.getBoolean("Tamed");
       }
-      this.isTamed = nbt.getBoolean("Tamed");
-      this.followState = nbt.getInt("FollowState");
-   }
 
-   private static class Factory implements Callable<ITameableEntity> {
-      public ITameableEntity call() throws Exception {
-         return new TameableEntityHandler();
-      }
+      this.followState = compound.getInt("FollowState");
    }
 }

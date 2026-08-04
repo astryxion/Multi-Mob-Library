@@ -23,6 +23,7 @@ public class EntityAIGrabItemFromFloor extends Goal {
    private final Set<ItemStack> temptItem;
    private boolean canGetScared;
    private int stealDelay = 0;
+   private int searchCooldown = 0;
 
    public EntityAIGrabItemFromFloor(PathfinderMob temptedEntityIn, double speedIn, Set<ItemStack> temptItemIn, boolean canGetScared) {
       this.temptedEntity = temptedEntityIn;
@@ -42,7 +43,6 @@ public class EntityAIGrabItemFromFloor extends Goal {
       } else if (!this.temptedEntity.getMainHandItem().isEmpty()) {
          return false;
       } else {
-         List<Entity> list = this.temptedEntity.level().getEntities(this.temptedEntity, this.temptedEntity.getBoundingBox().inflate(10.0D, 10.0D, 10.0D));
          if (this.stealDelay > 0) {
             --this.stealDelay;
             if (this.stealDelay == 0) {
@@ -50,23 +50,25 @@ public class EntityAIGrabItemFromFloor extends Goal {
             }
 
             return false;
-         } else {
-            if (list != null && list.size() > 0) {
-               for(int i = 0; i < list.size(); ++i) {
-                  Entity entity = list.get(i);
-                  if (entity != null && entity instanceof ItemEntity) {
-                     ItemEntity item = (ItemEntity)entity;
-                     ItemStack stack = item.getItem();
-                     if (!stack.isEmpty() && this.isTempting(stack)) {
-                        this.temptingItem = item;
-                        return true;
-                     }
-                  }
-               }
-            }
+         }
 
+         if (this.searchCooldown > 0) {
+            --this.searchCooldown;
             return false;
          }
+         this.searchCooldown = 10;
+
+         List<ItemEntity> list = this.temptedEntity.level().getEntitiesOfClass(ItemEntity.class, this.temptedEntity.getBoundingBox().inflate(10.0D, 10.0D, 10.0D));
+
+         for (ItemEntity item : list) {
+            ItemStack stack = item.getItem();
+            if (!stack.isEmpty() && this.isTempting(stack)) {
+               this.temptingItem = item;
+               return true;
+            }
+         }
+
+         return false;
       }
    }
 
@@ -84,7 +86,16 @@ public class EntityAIGrabItemFromFloor extends Goal {
 
    @Override
    public boolean canContinueToUse() {
-      return this.canUse();
+      if (this.temptingItem == null || !this.temptingItem.isAlive() || this.temptingItem.getItem().isEmpty()) {
+         return false;
+      }
+      if (!this.temptedEntity.getMainHandItem().isEmpty()) {
+         return false;
+      }
+      if (this.temptedEntity.getLastHurtByMob() != null && this.canGetScared) {
+         return false;
+      }
+      return this.temptedEntity.distanceToSqr(this.temptingItem) <= 256.0D;
    }
 
    @Override

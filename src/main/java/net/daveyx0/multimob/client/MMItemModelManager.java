@@ -7,15 +7,16 @@ import net.daveyx0.multimob.core.MMItemRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.DyedItemColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 
 @OnlyIn(Dist.CLIENT)
 public class MMItemModelManager {
@@ -28,7 +29,7 @@ public class MMItemModelManager {
 
    @SubscribeEvent
    public void registerModels(ModelEvent.RegisterAdditional event) {
-      for(Item item : MMItemRegistry.ITEMS) {
+      for (Item item : MMItemRegistry.ITEMS) {
          ITEMS.add(item);
       }
 
@@ -40,11 +41,7 @@ public class MMItemModelManager {
    }
 
    public void registerItemColors(Item[] items) {
-      this.registerItemColor(new ItemColor() {
-         public int getColor(ItemStack stack, int tintIndex) {
-            return tintIndex > 0 ? -1 : MMItemModelManager.getColor(stack);
-         }
-      }, items);
+      this.registerItemColor((stack, tintIndex) -> tintIndex > 0 ? 0xFFFFFFFF : MMItemModelManager.getColor(stack), items);
    }
 
    private void registerItemColor(ItemColor itemcolor, Item... itemsIn) {
@@ -52,12 +49,12 @@ public class MMItemModelManager {
    }
 
    private void registerItemModel(Item item) {
-      ResourceLocation registryName = (ResourceLocation)Objects.requireNonNull(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item));
+      ResourceLocation registryName = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(item));
       this.registerItemModel(item, registryName.toString());
    }
 
    private void registerItemModel(Item item, String modelLocation) {
-      ModelResourceLocation fullModelLocation = new ModelResourceLocation(ResourceLocation.parse(modelLocation), "inventory");
+      ModelResourceLocation fullModelLocation = ModelResourceLocation.inventory(ResourceLocation.parse(modelLocation));
       this.registerItemModel(item, fullModelLocation);
    }
 
@@ -66,14 +63,8 @@ public class MMItemModelManager {
    }
 
    public static int getColor(ItemStack stack) {
-      CompoundTag customData = stack.get(DataComponents.CUSTOM_DATA) != null ? stack.get(DataComponents.CUSTOM_DATA).copyTag() : null;
-      if (customData != null) {
-         CompoundTag displayTag = customData.getCompound("display");
-         if (displayTag != null && displayTag.contains("color", 3)) {
-            return displayTag.getInt("color");
-         }
-      }
-
-      return 16777215;
+      // 1.21 item colors are ARGB; RGB-only values (alpha 0) render fully invisible.
+      DyedItemColor dyed = stack.get(DataComponents.DYED_COLOR);
+      return dyed != null ? (0xFF000000 | dyed.rgb()) : 0xFFFFFFFF;
    }
 }
