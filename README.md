@@ -2,7 +2,7 @@
 
 Multi Mob Library is a core library for Minecraft mob mods.
 
-This is the Forge 1.20.1 port and is required by Primitive Mobs.
+This is the Forge 1.20.1 port and is required by The Summoner and Primitive Mobs.
 
 ## Requirements
 
@@ -11,7 +11,7 @@ This is the Forge 1.20.1 port and is required by Primitive Mobs.
 
 ## Version
 
-Current version: **1.0.2**
+Current version: **1.0.3**
 
 ## Attribution
 
@@ -19,8 +19,10 @@ Current version: **1.0.2**
 
 **Credits:** Astryxion, Daveyx0
 
+- **Daveyx0** — original Multi Mob Library
+
 ## License
 
-This project is licensed under the [Creative Commons Attribution 4.0 International License](LICENSE).
+This project is licensed under the [Creative Commons Attribution-NonCommercial 3.0](LICENSE).
 
 See the [LICENSE](LICENSE) file for the full license text.
