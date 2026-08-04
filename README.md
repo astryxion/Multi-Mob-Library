@@ -12,7 +12,7 @@ This is the NeoForge 1.21.1 port and is required by The Summoner and Primitive M
 
 ## Version
 
-Current version: **1.21.1-1.0.0**
+Current version: **1.21.1-1.1.0**
 
 ## Attribution
 
